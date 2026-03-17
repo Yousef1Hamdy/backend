@@ -5,6 +5,10 @@ import { globalErrorHandling } from "./common/index.js";
 import { authentication, connectRedis } from "./DB/index.js";
 import { authRouter } from "./modules/auth/index.js";
 import { userRouter } from "./modules/user/index.js";
+import homeRouter from "./modules/home/home.routes.js";
+import childcareRouter from "./modules/childcare/childcare.routes.js";
+import contactRouter from "./modules/contact/contact.routes.js";
+
 async function bootstrap() {
   const app = express();
 
@@ -20,8 +24,11 @@ async function bootstrap() {
   });
   app.use("/auth", authRouter);
   app.use("/user", userRouter);
-
-  //invalid routing
+  app.use("/home", homeRouter);
+  app.use("/childcare", childcareRouter);
+  app.use("/contact", contactRouter);
+ 
+ //invalid routing
   app.use("{/*dummy}", (req, res) => {
     return res.status(404).json({ message: "Invalid application routing" });
   });
