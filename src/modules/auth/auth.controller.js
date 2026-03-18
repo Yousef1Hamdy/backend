@@ -13,6 +13,7 @@ import { validation } from "../../middleware/index.js";
 import * as validators from "./auth.validation.js";
 
 const router = Router();
+
 router.post(
   "/signup",
   validation(validators.signup),
@@ -22,7 +23,6 @@ router.post(
       res,
       status: 201,
       message: "User created successfully",
-      data: { user },
     });
   },
 );
@@ -32,7 +32,6 @@ router.patch(
   validation(validators.confirmEmail),
   async (req, res, next) => {
     const { message } = await confirmEmail(req.body);
-    console.log({ message });
 
     return successResponse({
       res,
@@ -97,7 +96,11 @@ router.post("/login", validation(validators.login), async (req, res, next) => {
   const issuer = `${protocol}://${host}`;
 
   const credentials = await login(req.body, issuer);
-  return successResponse({ res, message: "Done Login", data: { ...credentials } });
+  return successResponse({
+    res,
+    message: "Done Login",
+    data: { ...credentials },
+  });
 });
 
 export default router;

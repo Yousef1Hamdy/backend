@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import jwt from "jsonwebtoken";
 import {
   ACCESS_EXPIRE_IN,
+  Hospital_REFRESH_TOKEN_SECRET_KEY,
+  Hospital_TOKEN_SECRET_KEY,
   REFRESH_EXPIRE_IN,
   SYSTEM_REFRESH_TOKEN_SECRET_KEY,
   SYSTEM_TOKEN_SECRET_KEY,
@@ -37,6 +39,12 @@ export const getTokenSignature = async (role) => {
       audience = AudienceEnum.System;
 
       break;
+    case RoleEnum.Hospital:
+      accessSignature = Hospital_TOKEN_SECRET_KEY;
+      refreshSignature = Hospital_REFRESH_TOKEN_SECRET_KEY;
+      audience = AudienceEnum.SystemHospital;
+
+      break;
     default:
       accessSignature = USER_TOKEN_SECRET_KEY;
       refreshSignature = USER_REFRESH_TOKEN_SECRET_KEY;
@@ -53,8 +61,12 @@ export const getSignatureLevel = async (audienceType) => {
     case AudienceEnum.System:
       signatureLevel = RoleEnum.Admin;
       break;
+    case AudienceEnum.SystemHospital:
+      signatureLevel = RoleEnum.Hospital;
+      break;
     default:
       signatureLevel = RoleEnum.User;
+      break;
   }
 
   return { signatureLevel };
@@ -126,6 +138,7 @@ export const decodeToken = async ({
   }
 
   const [decodeTokenType, audienceType] = decoded.aud;
+  console.log({ audienceType });
 
   if (decodeTokenType !== tokenType) {
     throw BadRequestException({
@@ -141,6 +154,7 @@ export const decodeToken = async ({
   }
 
   const { signatureLevel } = await getSignatureLevel(audienceType);
+
   const { accessSignature, refreshSignature } =
     await getTokenSignature(signatureLevel);
 
@@ -162,12 +176,18 @@ export const decodeToken = async ({
     throw NotFoundException({ message: "not Register account" });
   }
 
+  if (user.role !== signatureLevel) {
+    throw UnauthorizedException({
+      message: "Your role has changed. Please login again.",
+    });
+  }
+
   if (
     user.changeCredentialTime &&
     user.changeCredentialTime.getTime() > decoded.iat * 1000
   ) {
     throw new UnauthorizedException({ message: "Invalid login session." });
   }
-  
+
   return { user, decoded };
 };

@@ -22,7 +22,6 @@ export const authentication = (tokenType = TokenTypeEnum.access) => {
         token: credential,
         tokenType,
       });
-      console.log({user});
       req.user = user;
       req.decoded = decoded;
       next();
