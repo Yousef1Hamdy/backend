@@ -1,10 +1,14 @@
-import { sendMessage } from "./contact.service.js";
+import { Router } from "express";
+import { authentication } from "../../middleware/index.js";
 import { successResponse } from "../../common/index.js";
+import { sendMessage } from "./contact.service.js";
 
-export const sendMessageController = async (req, res, next) => {
+const router = Router();
+
+router.post("/", authentication(), async (req, res, next) => {
   const { email, message } = req.body;
 
-  const data = await sendMessage({
+  const contact = await sendMessage({
     userId: req.user._id,
     email,
     message
@@ -12,7 +16,9 @@ export const sendMessageController = async (req, res, next) => {
 
   return successResponse({
     res,
-    data,
-    message: "Message sent successfully"
+    message: "Message sent successfully",
+    data: { contact } // 🔥 wrapped like your friend style
   });
-};
+});
+
+export default router;

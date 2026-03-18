@@ -10,7 +10,7 @@ router.get("/", authentication(), async (req, res, next) => {
 
   return successResponse({
     res,
-    data
+    data: { ...data } // 🔥 IMPORTANT (same as auth style)
   });
 });
 

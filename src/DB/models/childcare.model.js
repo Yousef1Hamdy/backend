@@ -1,18 +1,22 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose from "mongoose";
 
-const childcareSchema = new Schema(
+const childcareSchema = new mongoose.Schema(
   {
     name: String,
-    description: String,
-    price: Number,
-    location: String,
+    address: String,
+    phone: String,
+
+    nicuAvailable: {
+      type: Number,
+      default: 0
+    },
+
+    normalAvailable: {
+      type: Number,
+      default: 0
+    }
   },
-  {
-    timestamps: true,
-    collection: "Childcare"
-  }
+  { timestamps: true }
 );
 
-export const ChildcareModel =
-  mongoose.models.Childcare ||
-  mongoose.model("Childcare", childcareSchema);
+export const ChildcareModel = mongoose.model("Childcare", childcareSchema);

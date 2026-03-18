@@ -1,6 +1,6 @@
 import {
   UserModel,
- ServiceModel,
+  ServiceModel,
   PartnerModel,
   OrderModel
 } from "../../DB/index.js";
@@ -9,28 +9,28 @@ import { findById, find } from "../../DB/index.js";
 
 export const getHomeData = async (userId) => {
 
-  //  USER
+  // 👤 USER
   const user = await findById({
     model: UserModel,
     id: userId,
     select: "firstName lastName profilePicture"
   });
 
-  //  SERVICES
+  // 🧩 SERVICES
   const services = await find({
     model: ServiceModel,
     select: "title slug image",
     options: { limit: 3 }
   });
 
-  //  PARTNERS (FROM DB)
+  // 🤝 PARTNERS
   const partners = await find({
     model: PartnerModel,
     select: "name logo",
     options: { limit: 10 }
   });
 
-  //  STATS (REAL DATA)
+  // 📊 STATS
   const totalUsers = await UserModel.countDocuments();
   const totalOrders = await OrderModel.countDocuments();
 

@@ -1,28 +1,29 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose from "mongoose";
 
-const orderSchema = new Schema(
+const orderSchema = new mongoose.Schema(
   {
     userId: {
-      type: mongoose.Types.ObjectId,
-      ref: "User",
-      required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
     },
+
     childcareId: {
-      type: mongoose.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Childcare"
     },
-    status: {
+
+    hospitalName: String,
+
+    childName: String,
+    phone: String,
+    condition: String,
+
+    type: {
       type: String,
-      enum: ["pending", "accepted", "rejected"],
-      default: "pending"
+      enum: ["nicu", "normal"]
     }
   },
-  {
-    timestamps: true,
-    collection: "Orders"
-  }
+  { timestamps: true }
 );
 
-export const OrderModel =
-  mongoose.models.Order ||
-  mongoose.model("Order", orderSchema);
+export const OrderModel = mongoose.model("Order", orderSchema);
