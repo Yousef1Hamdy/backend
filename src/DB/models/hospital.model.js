@@ -27,8 +27,18 @@ const hospitalSchema = new mongoose.Schema(
   {
     timestamps: true,
     collection: "Hospitals",
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   },
 );
+
+hospitalSchema.virtual("services", {
+  ref: "Service",
+  localField: "_id",
+  foreignField: "hospital",
+});
+
+
 
 export const HospitalModel =
   mongoose.models.Hospital || mongoose.model("Hospital", hospitalSchema);

@@ -1,5 +1,5 @@
 export const TypeServiceEnum = {
-  Nursery: "nursery",
-  Care: "care",
-  Clinic: "clinic",
+  Nursery: "حضانات أطفال",
+  Care: "عناية مركزة",
+  Clinic: "طاقم طبي",
 };

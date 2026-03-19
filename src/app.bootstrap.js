@@ -11,6 +11,7 @@ import { contactRouter } from "./modules/contact/index.js";
 import { adminRouter } from "./modules/admin/index.js";
 import { subscriberRouter } from "./modules/subscriber/index.js";
 import { profileRouter } from "./modules/profile/index.js";
+import { authRouter, hospitalRouter, serviceRouter, userRouter } from "./modules/index.js";
 
 async function bootstrap() {
   const app = express();
@@ -35,10 +36,14 @@ async function bootstrap() {
   app.use("/profile", profileRouter);
  
  //invalid routing
+  app.use("/hospitals", hospitalRouter);
+  app.use("/services", serviceRouter);
+
+  //invalid routing
   app.use("{/*dummy}", (req, res) => {
     return res.status(404).json({ message: "Invalid application routing" });
   });
-  
+
   //   Error handling
   app.use(globalErrorHandling);
 
