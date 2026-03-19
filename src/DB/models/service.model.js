@@ -3,7 +3,7 @@ import { TypeServiceEnum } from "../../common/index.js";
 
 const serviceSchema = new mongoose.Schema(
   {
-    hospitalId: {
+    hospital: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Hospital",
       required: [true, "المستشفى مطلوب"],

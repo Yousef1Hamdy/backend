@@ -1,0 +1,1 @@
+export {default as serviceRouter} from "./service.controller.js"

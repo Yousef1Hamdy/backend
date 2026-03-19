@@ -1,7 +1,24 @@
 import joi from "joi";
 import { Types } from "mongoose";
+import { TypeServiceEnum } from "../enums/index.js";
+
+const address = joi
+  .string()
+  .min(5)
+  .max(200)
+  .pattern(/^[a-zA-Z0-9\u0600-\u06FF\s,.\-#\/]+$/)
+  .trim()
+  .messages({
+    "string.base": "العنوان لازم يكون نص",
+    "string.empty": "العنوان مطلوب",
+    "string.min": "العنوان لازم يكون على الأقل 5 حروف",
+    "string.max": "العنوان لا يزيد عن 200 حرف",
+    "string.pattern.base": "العنوان يحتوي على حروف غير مسموح بها",
+    "any.required": "العنوان مطلوب",
+  });
 
 export const generalValidationFields = {
+  address,
   email: joi
     .string()
     .email({
@@ -10,7 +27,6 @@ export const generalValidationFields = {
       tlds: { allow: ["com", "net", "edu"] },
     })
     .pattern(/^[^\s@]+@([a-zA-Z0-9-]+\.){1,2}(com|net|edu)$/)
-    .required()
     .messages({
       "string.base": "البريد الإلكتروني لازم يكون نص",
       "string.empty": "البريد الإلكتروني مطلوب",
@@ -25,7 +41,6 @@ export const generalValidationFields = {
     .pattern(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
     )
-    .required()
     .messages({
       "string.base": "كلمة المرور لازم تكون نص",
       "string.empty": "كلمة المرور مطلوبة",
@@ -36,19 +51,18 @@ export const generalValidationFields = {
 
   username: joi
     .string()
-    .pattern(/^[A-Za-z][a-z]+ [A-Za-z][a-z]+$/)
-    .required()
+    .pattern(/^[\u0600-\u06FF]+(\s[\u0600-\u06FF]+)+$/)
     .messages({
       "string.base": "اسم المستخدم لازم يكون نص",
       "string.empty": "اسم المستخدم مطلوب",
-      "string.pattern.base": "لازم تكتب الاسم الأول واسم العائلة",
+      "string.pattern.base":
+        "لازم تكتب الاسم الأول واسم العائلة (حروف عربية فقط)",
       "any.required": "اسم المستخدم مطلوب",
     }),
 
   otp: joi
     .string()
     .pattern(/^\d{6}$/)
-    .required()
     .messages({
       "string.pattern.base": "رمز التحقق لازم يكون 6 أرقام",
       "any.required": "رمز التحقق مطلوب",
@@ -57,14 +71,13 @@ export const generalValidationFields = {
   phone: joi
     .string()
     .pattern(/^(20|2|\+2)?01[0-25]\d{8}$/)
-    .required()
     .messages({
       "string.pattern.base": "رقم الهاتف غير صحيح",
       "any.required": "رقم الهاتف مطلوب",
     }),
 
   confirmPassword: (path = "password") =>
-    joi.string().valid(joi.ref(path)).required().messages({
+    joi.string().valid(joi.ref(path)).messages({
       "any.only": "تأكيد كلمة المرور غير متطابق",
       "any.required": "تأكيد كلمة المرور مطلوب",
     }),
@@ -75,23 +88,7 @@ export const generalValidationFields = {
       : helper.message("المعرف (ID) غير صحيح");
   }),
 
-  address: joi
-    .string()
-    .min(5)
-    .max(200)
-    .pattern(/^[a-zA-Z0-9\u0600-\u06FF\s,.\-#\/]+$/)
-    .trim()
-    .required()
-    .messages({
-      "string.base": "العنوان لازم يكون نص",
-      "string.empty": "العنوان مطلوب",
-      "string.min": "العنوان لازم يكون على الأقل 5 حروف",
-      "string.max": "العنوان لا يزيد عن 200 حرف",
-      "string.pattern.base": "العنوان يحتوي على حروف غير مسموح بها",
-      "any.required": "العنوان مطلوب",
-    }),
-
-  nameHospital: joi.string().min(3).max(100).required().messages({
+  nameHospital: joi.string().min(3).max(100).messages({
     "string.base": "اسم المستشفى لازم يكون نص",
     "string.empty": "اسم المستشفى مطلوب",
     "string.min": "اسم المستشفى لازم يكون على الأقل 3 حروف",
@@ -104,6 +101,8 @@ export const generalValidationFields = {
       "string.empty": "المدينة مطلوبة",
       "any.required": "المدينة مطلوبة",
     }),
+
+    address: address.required(),
   }),
 
   hospitalNameService: joi
@@ -119,7 +118,7 @@ export const generalValidationFields = {
       "any.required": "المستشفى مطلوب",
     }),
 
-  nameService: joi.string().min(2).max(100).required().messages({
+  nameService: joi.string().min(2).max(100).messages({
     "string.base": "اسم الخدمة لازم يكون نص",
     "string.empty": "اسم الخدمة مطلوب",
     "string.min": "اسم الخدمة لازم يكون على الأقل حرفين",
@@ -129,26 +128,30 @@ export const generalValidationFields = {
 
   typeService: joi
     .string()
-    .valid("nursery", "care", "clinic")
-    .required()
+    .valid(...Object.values(TypeServiceEnum))
     .messages({
-      "any.only": "نوع الخدمة غير صالح (nursery, care, clinic فقط)",
+      "any.only": `نوع الخدمة غير صالح (${Object.values(TypeServiceEnum).join(", ")} فقط)`,
       "any.required": "نوع الخدمة مطلوب",
     }),
 
-  descriptionService: joi.string().max(500).allow("").messages({
-    "string.base": "الوصف لازم يكون نص",
-    "string.max": "الوصف لا يزيد عن 500 حرف",
-  }),
+  descriptionService: joi
+    .array()
+    .items(
+      joi.string().max(30).required().messages({
+        "string.base": "كل عنصر في الوصف لازم يكون نص",
+        "string.max": "كل عنصر في الوصف لا يزيد عن 30 حرف",
+        "any.required": "كل عنصر في الوصف مطلوب",
+      }),
+    )
+    .min(1)
+    .messages({
+      "array.base": "الوصف لازم يكون مصفوفة",
+      "array.min": "الوصف لازم يحتوي على عنصر واحد على الأقل",
+      "any.required": "الوصف مطلوب",
+    }),
 
-  capacityNersery: joi.number().min(0).messages({
+  capacityService: joi.number().min(0).messages({
     "number.base": "السعة لازم تكون رقم",
     "number.min": "السعة لا يمكن أن تكون أقل من 0",
-  }),
-
-  priceService: joi.number().min(0).required().messages({
-    "number.base": "السعر لازم يكون رقم",
-    "number.min": "السعر لا يمكن أن يكون أقل من 0",
-    "any.required": "السعر مطلوب",
   }),
 };
