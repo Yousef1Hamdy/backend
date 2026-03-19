@@ -178,3 +178,9 @@ export const deleteOne = async ({ filter, model }) => {
 export const findOneAndDelete = async ({ filter, model } = {}) => {
   return await model.findOneAndDelete(filter || {});
 };
+
+export const findByIdAndDelete = async ({ id, model } = {}) => {
+
+  const deletedDoc = await model.findByIdAndDelete(id);
+  return deletedDoc;
+};

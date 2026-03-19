@@ -3,8 +3,8 @@ import cors from "cors";
 import { PORT } from "../config/config.service.js";
 import { globalErrorHandling } from "./common/index.js";
 import { authentication, connectRedis } from "./DB/index.js";
-import { authRouter } from "./modules/auth/index.js";
-import { userRouter } from "./modules/user/index.js";
+import { authRouter, hospitalRouter, serviceRouter, userRouter } from "./modules/index.js";
+
 async function bootstrap() {
   const app = express();
 
@@ -20,12 +20,14 @@ async function bootstrap() {
   });
   app.use("/auth", authRouter);
   app.use("/user", userRouter);
+  app.use("/hospitals", hospitalRouter);
+  app.use("/services", serviceRouter);
 
   //invalid routing
   app.use("{/*dummy}", (req, res) => {
     return res.status(404).json({ message: "Invalid application routing" });
   });
-  
+
   //   Error handling
   app.use(globalErrorHandling);
 
