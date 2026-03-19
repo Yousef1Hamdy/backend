@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authentication } from "../../middleware/index.js";
+import { authentication, validation } from "../../middleware/index.js"; // 🔥 added validation
 import { successResponse } from "../../common/index.js";
 
 import {
@@ -7,6 +7,8 @@ import {
   getChildcareDetails,
   bookChildcare
 } from "./childcare.service.js";
+
+import * as validators from "./childcare.validation.js"; // 🔥 added
 
 const router = Router();
 
@@ -21,30 +23,40 @@ router.get("/", authentication(), async (req, res, next) => {
 });
 
 //  GET DETAILS 
-router.get("/:id", authentication(), async (req, res, next) => {
-  const childcare = await getChildcareDetails(req.params.id);
+router.get(
+  "/:id",
+  authentication(),
+  validation(validators.childcareId), // 🔥 added ONLY
+  async (req, res, next) => {
+    const childcare = await getChildcareDetails(req.params.id);
 
-  return successResponse({
-    res,
-    data: { childcare }
-  });
-});
+    return successResponse({
+      res,
+      data: { childcare }
+    });
+  }
+);
 
 //  BOOK 
-router.post("/:id/book", authentication(), async (req, res, next) => {
-  const { type, childName, phone, condition } = req.body;
+router.post(
+  "/:id/book",
+  authentication(),
+  validation(validators.bookChildcare), // 🔥 added ONLY
+  async (req, res, next) => {
+    const { type, childName, phone, condition } = req.body;
 
-  const order = await bookChildcare(
-    req.user._id,
-    req.params.id,
-    { type, childName, phone, condition }
-  );
+    const order = await bookChildcare(
+      req.user._id,
+      req.params.id,
+      { type, childName, phone, condition }
+    );
 
-  return successResponse({
-    res,
-    message: "Reservation confirmed",
-    data: { order }
-  });
-});
+    return successResponse({
+      res,
+      message: "Reservation confirmed",
+      data: { order }
+    });
+  }
+);
 
 export default router;
