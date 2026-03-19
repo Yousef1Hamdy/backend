@@ -3,6 +3,14 @@ import cors from "cors";
 import { PORT } from "../config/config.service.js";
 import { globalErrorHandling } from "./common/index.js";
 import { authentication, connectRedis } from "./DB/index.js";
+import { authRouter } from "./modules/auth/index.js";
+import { userRouter } from "./modules/user/index.js";
+import { homeRouter } from "./modules/home/index.js";
+import { childcareRouter } from "./modules/childcare/index.js";
+import { contactRouter } from "./modules/contact/index.js";
+import { adminRouter } from "./modules/admin/index.js";
+import { subscriberRouter } from "./modules/subscriber/index.js";
+import { profileRouter } from "./modules/profile/index.js";
 import { authRouter, hospitalRouter, serviceRouter, userRouter } from "./modules/index.js";
 
 async function bootstrap() {
@@ -20,6 +28,14 @@ async function bootstrap() {
   });
   app.use("/auth", authRouter);
   app.use("/user", userRouter);
+  app.use("/home", homeRouter);
+  app.use("/childcare", childcareRouter);
+  app.use("/contact", contactRouter);
+  app.use("/admin", adminRouter);
+  app.use("/subscribe", subscriberRouter);
+  app.use("/profile", profileRouter);
+ 
+ //invalid routing
   app.use("/hospitals", hospitalRouter);
   app.use("/services", serviceRouter);
 

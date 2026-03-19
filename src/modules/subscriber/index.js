@@ -1,0 +1,1 @@
+export { default as subscriberRouter } from "./subscriber.controller.js";

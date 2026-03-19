@@ -1,0 +1,1 @@
+export { default as childcareRouter } from "./childcare.controller.js";
