@@ -2,41 +2,41 @@ import {
   UserModel,
   ServiceModel,
   PartnerModel,
-  OrderModel
+  BookingModel
 } from "../../DB/index.js";
 
 import { findById, find } from "../../DB/index.js";
 
 export const getHomeData = async (userId) => {
 
-  // 👤 USER
+  //  USER
   const user = await findById({
     model: UserModel,
     id: userId,
     select: "firstName lastName profilePicture"
   });
 
-  // 🧩 SERVICES
+  //  SERVICES 
   const services = await find({
     model: ServiceModel,
-    select: "title slug image",
+    select: "name type",
     options: { limit: 3 }
   });
 
-  // 🤝 PARTNERS
+  //  PARTNERS
   const partners = await find({
     model: PartnerModel,
     select: "name logo",
     options: { limit: 10 }
   });
 
-  // 📊 STATS
+  // STATS 
   const totalUsers = await UserModel.countDocuments();
-  const totalOrders = await OrderModel.countDocuments();
+  const totalBookings = await BookingModel.countDocuments();
 
   const stats = {
     users: totalUsers,
-    orders: totalOrders
+    orders: totalBookings 
   };
 
   return {

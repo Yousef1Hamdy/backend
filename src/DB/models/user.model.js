@@ -5,49 +5,77 @@ const userSchema = new Schema(
   {
     firstName: {
       type: String,
-      minLength: [2, "length must be greater than 2"],
-      maxLength: 12,
-      required: [true, "first name is required"],
+      minlength: [2, "الاسم الأول لازم يكون على الأقل حرفين"],
+      maxlength: [12, "الاسم الأول لا يزيد عن 12 حرف"],
+      required: [true, "الاسم الأول مطلوب"],
       trim: true,
     },
+
     lastName: {
       type: String,
-      maxLength: 12,
+      maxlength: [12, "اسم العائلة لا يزيد عن 12 حرف"],
       trim: true,
     },
+
     email: {
       type: String,
-      required: true,
+      required: [true, "البريد الإلكتروني مطلوب"],
       trim: true,
       unique: true,
       lowercase: true,
     },
+
     password: {
       type: String,
-      required: true,
+      required: [true, "كلمة المرور مطلوبة"],
       trim: true,
       select: false,
-      minlength: 6,
+      minlength: [6, "كلمة المرور لازم تكون على الأقل 6 حروف"],
     },
-    phone: String,
+
+    phone: {
+      type: String,
+    },
+
     role: {
       type: Number,
       enum: Object.values(RoleEnum),
       default: RoleEnum.User,
     },
+
     gender: {
       type: Number,
-      enum: Object.values(GenderEnum),
+      enum: {
+        values: Object.values(GenderEnum),
+        message: "النوع غير صالح",
+      },
       default: GenderEnum.Male,
     },
+
     provider: {
       type: Number,
       enum: Object.values(ProviderEnum),
       default: ProviderEnum.System,
     },
-    profilePicture: String,
-    coverProfilePictures: [String],
+
+    address: {
+      type: String,
+      minlength: [5, "العنوان لازم يكون على الأقل 5 حروف"],
+      maxlength: [200, "العنوان لا يزيد عن 200 حرف"],
+    },
+
+    profilePicture: {
+      type: String,
+    },
+
+    coverProfilePictures: [
+      {
+        type: String,
+      },
+    ],
+
     confirmEmail: Date,
+
     changeCredentialTime: Date,
   },
   {
@@ -61,6 +89,8 @@ const userSchema = new Schema(
     toObject: { virtuals: true },
   },
 );
+
+// 👤 virtual username
 userSchema
   .virtual("username")
   .set(function (value) {

@@ -14,6 +14,7 @@ export const signup = {
   body: login.body.append({
     phone: generalValidationFields.phone.required(),
     username: generalValidationFields.username.required(),
+    address: generalValidationFields.address.required(),
     confirmPassword: generalValidationFields
       .confirmPassword("password")
       .required(),

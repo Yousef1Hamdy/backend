@@ -10,7 +10,7 @@ import {
 
 const router = Router();
 
-// 🟢 1. GET ALL HOSPITALS (Page 1)
+// GET ALL HOSPITALS 
 router.get("/", authentication(), async (req, res, next) => {
   const childcare = await getAllChildcare();
 
@@ -20,7 +20,7 @@ router.get("/", authentication(), async (req, res, next) => {
   });
 });
 
-// 🟢 2. GET DETAILS (Page 2)
+//  GET DETAILS 
 router.get("/:id", authentication(), async (req, res, next) => {
   const childcare = await getChildcareDetails(req.params.id);
 
@@ -30,7 +30,7 @@ router.get("/:id", authentication(), async (req, res, next) => {
   });
 });
 
-// 🟢 3. BOOK (Page 3 + 4)
+//  BOOK 
 router.post("/:id/book", authentication(), async (req, res, next) => {
   const { type, childName, phone, condition } = req.body;
 

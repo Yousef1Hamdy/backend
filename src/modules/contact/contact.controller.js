@@ -17,7 +17,7 @@ router.post("/", authentication(), async (req, res, next) => {
   return successResponse({
     res,
     message: "Message sent successfully",
-    data: { contact } // 🔥 wrapped like your friend style
+    data: { contact } 
   });
 });
 

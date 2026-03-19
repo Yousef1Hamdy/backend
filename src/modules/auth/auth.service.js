@@ -23,7 +23,12 @@ import {
   set,
   ttl,
 } from "../../common/index.js";
-import { createOne, findOne, findOneAndUpdate, UserModel } from "../../DB/index.js";
+import {
+  createOne,
+  findOne,
+  findOneAndUpdate,
+  UserModel,
+} from "../../DB/index.js";
 
 export const verifyEmailOtp = async ({
   email,
@@ -75,7 +80,7 @@ export const verifyEmailOtp = async ({
 };
 
 export const signup = async (inputs) => {
-  const { email, password, phone, username } = inputs;
+  const { email, password, phone, username, address } = inputs;
 
   const checkUserFound = await findOne({
     model: UserModel,
@@ -94,6 +99,7 @@ export const signup = async (inputs) => {
       password: await generateHash({ plaintext: password }),
       phone: await encryption(phone),
       username,
+      address,
     },
   });
 
@@ -101,7 +107,7 @@ export const signup = async (inputs) => {
     await verifyEmailOtp({ email });
   });
 
-  return user;
+  return ;
 };
 
 export const resendConfirmEmail = async (inputs) => {

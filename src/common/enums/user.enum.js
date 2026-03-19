@@ -1,7 +1,7 @@
 export const RoleEnum = {
   Admin: 0,
-  User: 1,
-  Hospital: 2,
+  Hospital: 1,
+  User: 2,
 };
 
 export const GenderEnum = {
@@ -13,5 +13,3 @@ export const ProviderEnum = {
   System: 0,
   Google: 1,
 };
-
-

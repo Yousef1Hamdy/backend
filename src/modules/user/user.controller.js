@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authentication } from "../../middleware/index.js";
-import { successResponse } from "../../common/index.js";
+import { authentication, authorization } from "../../middleware/index.js";
+import { RoleEnum, successResponse } from "../../common/index.js";
 import { profile } from "./user.service.js";
 
 const router = Router();

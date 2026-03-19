@@ -11,7 +11,7 @@ const partnerSchema = new Schema(
       required: true
     },
     type: {
-      type: String, // hospital, clinic, lab
+      type: String, // hospital,
     }
   },
   {

@@ -1,6 +1,7 @@
 import {
-  ChildcareModel,
-  OrderModel
+  ServiceModel,
+  BookingModel,
+  HospitalModel
 } from "../../DB/index.js";
 
 import {
@@ -9,76 +10,60 @@ import {
   createOne
 } from "../../DB/index.js";
 
-// 🟢 1. GET ALL
+//  GET ALL 
 export const getAllChildcare = async () => {
   return await find({
-    model: ChildcareModel,
-    select: "name address",
+    model: ServiceModel,
+    filter: { type: "childcare" },
+    select: "name hospitalId"
   });
 };
 
-// 🟢 2. GET DETAILS
+//   GET DETAILS
 export const getChildcareDetails = async (id) => {
   return await findById({
-    model: ChildcareModel,
+    model: ServiceModel,
     id,
-    select: "name address phone nicuAvailable normalAvailable"
+    select: "name description hospitalId",
+    options: {
+      populate: [{ path: "hospitalId", select: "name location" }]
+    }
   });
 };
 
-// 🟢 3. BOOK
-export const bookChildcare = async (userId, childcareId, details) => {
+//  BOOK
+export const bookChildcare = async (userId, serviceId, details) => {
 
-  const childcare = await findById({
-    model: ChildcareModel,
-    id: childcareId
+  const service = await findById({
+    model: ServiceModel,
+    id: serviceId
   });
 
-  if (!childcare) {
-    throw new Error("Childcare not found");
+  if (!service) {
+    throw new Error("Service not found");
   }
 
-  // ❗ optional: check availability
-  if (
-    details.type === "nicu" &&
-    childcare.nicuAvailable <= 0
-  ) {
-    throw new Error("No NICU slots available");
-  }
-
-  if (
-    details.type === "normal" &&
-    childcare.normalAvailable <= 0
-  ) {
-    throw new Error("No normal slots available");
-  }
-
-  // 🟢 create order
+  //  create booking 
   await createOne({
-    model: OrderModel,
+    model: BookingModel,
     data: {
       userId,
-      childcareId,
-      hospitalName: childcare.name,
-      type: details.type,
-      childName: details.childName,
-      phone: details.phone,
-      condition: details.condition
+      serviceId,
+      hospitalId: service.hospitalId,
+      date: new Date(), //  required
+      status: "pending"
     }
   });
 
-  // ❗ optional: decrease available count
-  if (details.type === "nicu") {
-    childcare.nicuAvailable -= 1;
-  } else {
-    childcare.normalAvailable -= 1;
-  }
+  // return confirmation
+  const hospital = await findById({
+    model: HospitalModel,
+    id: service.hospitalId,
+    select: "name"
+  });
 
-  await childcare.save();
-
-  // 🟢 return confirmation (for Page 4)
   return {
-    hospitalName: childcare.name,
+    hospitalName: hospital?.name,
     childName: details.childName,
     phone: details.phone,
     condition: details.condition,

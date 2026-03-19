@@ -22,11 +22,16 @@ export const REDIS_URI = process.env.REDIS_URI;
 // token
 export const SYSTEM_TOKEN_SECRET_KEY = process.env.SYSTEM_TOKEN_SECRET_KEY;
 export const USER_TOKEN_SECRET_KEY = process.env.USER_TOKEN_SECRET_KEY;
+export const Hospital_TOKEN_SECRET_KEY = process.env.Hospital_TOKEN_SECRET_KEY;
 
 export const SYSTEM_REFRESH_TOKEN_SECRET_KEY =
   process.env.SYSTEM_REFRESH_TOKEN_SECRET_KEY;
+  
 export const USER_REFRESH_TOKEN_SECRET_KEY =
   process.env.USER_REFRESH_TOKEN_SECRET_KEY;
+
+export const Hospital_REFRESH_TOKEN_SECRET_KEY =
+  process.env.Hospital_REFRESH_TOKEN_SECRET_KEY;
 
 export const ACCESS_EXPIRE_IN = parseInt(process.env.ACCESS_EXPIRE_IN ?? 1800);
 export const REFRESH_EXPIRE_IN = parseInt(
