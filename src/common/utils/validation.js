@@ -1,6 +1,6 @@
 import joi from "joi";
 import { Types } from "mongoose";
-import { TypeServiceEnum } from "../enums/index.js";
+import { GenderEnum, RoleEnum, TypeServiceEnum } from "../enums/index.js";
 
 const address = joi
   .string()
@@ -88,6 +88,25 @@ export const generalValidationFields = {
       : helper.message("المعرف (ID) غير صحيح");
   }),
 
+  role: joi
+    .number()
+    .valid(...Object.values(RoleEnum))
+    .required()
+    .messages({
+      "any.required": "حقل الدور مطلوب",
+      "number.base": "الدور يجب أن يكون رقمًا",
+      "any.only": "قيمة الدور غير صحيحة",
+    }),
+
+  gender: joi
+    .number()
+    .valid(...Object.values(GenderEnum))
+    .required()
+    .messages({
+      "any.required": "حقل النوع مطلوب",
+      "number.base": "النوع يجب أن يكون رقمًا",
+      "any.only": "قيمة النوع غير صحيحة",
+    }),
   nameHospital: joi.string().min(3).max(100).messages({
     "string.base": "اسم المستشفى لازم يكون نص",
     "string.empty": "اسم المستشفى مطلوب",

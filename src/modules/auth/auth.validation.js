@@ -15,6 +15,8 @@ export const signup = {
     phone: generalValidationFields.phone.required(),
     username: generalValidationFields.username.required(),
     address: generalValidationFields.address.required(),
+    role: generalValidationFields.role.required(),
+    gender: generalValidationFields.gender.required(),
     confirmPassword: generalValidationFields
       .confirmPassword("password")
       .required(),
