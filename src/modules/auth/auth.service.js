@@ -9,6 +9,7 @@ import {
   EmailEnum,
   emailTemplate,
   encryption,
+  ForbiddenRequestException,
   generateHash,
   generateOTP,
   get,
@@ -19,6 +20,7 @@ import {
   otpKey,
   otpMaxRequestKey,
   ProviderEnum,
+  RoleEnum,
   sendEmail,
   set,
   ttl,
@@ -80,7 +82,7 @@ export const verifyEmailOtp = async ({
 };
 
 export const signup = async (inputs) => {
-  const { email, password, phone, username, address } = inputs;
+  const { email, password, phone, username, address , role , gender } = inputs;
 
   const checkUserFound = await findOne({
     model: UserModel,
@@ -89,6 +91,12 @@ export const signup = async (inputs) => {
 
   if (checkUserFound) {
     throw ConflictException({ message: "Email exists" });
+  }
+
+  if (role === RoleEnum.Admin || role === RoleEnum.Hospital) {
+    throw ForbiddenRequestException({
+      message: "غير مسموح بإنشاء حساب بهذا الدور",
+    });
   }
 
   const user = await createOne({
@@ -100,6 +108,8 @@ export const signup = async (inputs) => {
       phone: await encryption(phone),
       username,
       address,
+      role,
+      gender,
     },
   });
 
@@ -107,7 +117,7 @@ export const signup = async (inputs) => {
     await verifyEmailOtp({ email });
   });
 
-  return ;
+  return;
 };
 
 export const resendConfirmEmail = async (inputs) => {
