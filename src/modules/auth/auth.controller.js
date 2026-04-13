@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { successResponse } from "../../common/index.js";
+import {
+  cloudFileUpload,
+  fileFieldValidation,
+  successResponse,
+} from "../../common/index.js";
 import {
   signup,
   login,
@@ -16,9 +20,15 @@ const router = Router();
 
 router.post(
   "/signup",
+  cloudFileUpload({
+    validation: fileFieldValidation.file,
+  }).single("document"),
   validation(validators.signup),
   async (req, res, next) => {
-    const user = await signup(req.body);
+    const user = await signup({
+      inputs: {...req.body},
+      file: req.file,
+    });
     return successResponse({
       res,
       status: 201,

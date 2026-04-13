@@ -63,16 +63,15 @@ const userSchema = new Schema(
       minlength: [5, "العنوان لازم يكون على الأقل 5 حروف"],
       maxlength: [200, "العنوان لا يزيد عن 200 حرف"],
     },
-
-    profilePicture: {
-      type: String,
+    nurseDocument: {
+      secure_url: String,
+      public_id: String,
     },
+    oldPassword: [String],
 
-    coverProfilePictures: [
-      {
-        type: String,
-      },
-    ],
+    profilePicture: { secure_url: String, public_id: String },
+
+    coverProfilePictures: [{ secure_url: String, public_id: String }],
 
     confirmEmail: Date,
 

@@ -1,0 +1,1 @@
+export { default as bookingRouter } from "./booking.controller.js";

@@ -2,6 +2,7 @@ export const RoleEnum = {
   Admin: 0,
   Hospital: 1,
   User: 2,
+  Nurse: 3,
 };
 
 export const GenderEnum = {

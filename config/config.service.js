@@ -26,7 +26,7 @@ export const Hospital_TOKEN_SECRET_KEY = process.env.Hospital_TOKEN_SECRET_KEY;
 
 export const SYSTEM_REFRESH_TOKEN_SECRET_KEY =
   process.env.SYSTEM_REFRESH_TOKEN_SECRET_KEY;
-  
+
 export const USER_REFRESH_TOKEN_SECRET_KEY =
   process.env.USER_REFRESH_TOKEN_SECRET_KEY;
 
@@ -48,3 +48,9 @@ export const SMTP_USER = process.env.SMTP_USER;
 export const SMTP_PASS = process.env.SMTP_PASS;
 export const SMTP_HOST = process.env.SMTP_HOST;
 export const SMTP_PORT = process.env.SMTP_PORT;
+
+// cloud
+
+export const CLOUD_NAME = process.env.CLOUD_NAME;
+export const API_KEY = process.env.API_KEY;
+export const API_SECRET = process.env.API_SECRET;

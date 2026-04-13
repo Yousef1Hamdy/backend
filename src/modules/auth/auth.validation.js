@@ -1,5 +1,8 @@
 import joi from "joi";
-import { generalValidationFields } from "../../common/index.js";
+import {
+  generalValidationFields,
+  fileFieldValidation,
+} from "../../common/index.js";
 
 export const login = {
   body: joi
@@ -47,4 +50,8 @@ export const resetForgotPassword = {
       .confirmPassword("password")
       .required(),
   }),
+};
+
+export const profileImage = {
+  file: generalValidationFields.file(fileFieldValidation.image).required(),
 };
