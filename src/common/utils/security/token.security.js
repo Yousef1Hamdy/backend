@@ -138,7 +138,6 @@ export const decodeToken = async ({
   }
 
   const [decodeTokenType, audienceType] = decoded.aud;
-  console.log({ audienceType });
 
   if (decodeTokenType !== tokenType) {
     throw BadRequestException({
