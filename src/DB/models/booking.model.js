@@ -26,6 +26,36 @@ const bookingSchema = new mongoose.Schema(
       required: [true, "تاريخ الحجز مطلوب"],
     },
 
+    reservationType: {
+      type: String,
+      trim: true,
+    },
+
+    patientName: {
+      type: String,
+      trim: true,
+    },
+
+    phone: {
+      type: String,
+      trim: true,
+    },
+
+    address: {
+      type: String,
+      trim: true,
+    },
+
+    condition: {
+      type: String,
+      trim: true,
+    },
+
+    serviceType: {
+      type: String,
+      trim: true,
+    },
+
     status: {
       type: String,
       enum: Object.values(BookingEnum),

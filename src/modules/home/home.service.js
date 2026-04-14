@@ -17,11 +17,10 @@ export const getHomeData = async (userId) => {
   });
 
   //  SERVICES 
-  const services = await find({
-    model: ServiceModel,
-    select: "name type",
-    options: { limit: 3 }
-  });
+  const services = await ServiceModel.find({})
+    .select("name type")
+    .limit(3)
+    .lean();
 
   //  PARTNERS
   const partners = await find({

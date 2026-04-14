@@ -5,56 +5,37 @@ import {
 } from "../../DB/index.js";
 
 import {
-  createOne,
-  deleteOne,
-  find,
-  findById
-} from "../../DB/index.js";
+  createModuleRecord,
+  deleteModuleRecordById,
+  listModuleRecords,
+} from "../shared/module.shared.js";
 
 //  ADD HOSPITAL
 export const addHospital = async (data) => {
-  return await createOne({
-    model: HospitalModel,
-    data
-  });
+  return await createModuleRecord(HospitalModel, data);
 };
 
 //  DELETE HOSPITAL
 export const deleteHospital = async (id) => {
-  return await deleteOne({
-    model: HospitalModel,
-    filter: { _id: id }
-  });
+  return await deleteModuleRecordById(HospitalModel, id);
 };
 
 //  ADD SERVICE
 export const addService = async (data) => {
-  return await createOne({
-    model: ServiceModel,
-    data
-  });
+  return await createModuleRecord(ServiceModel, data);
 };
 
 //  DELETE SERVICE
 export const deleteService = async (id) => {
-  return await deleteOne({
-    model: ServiceModel,
-    filter: { _id: id }
-  });
+  return await deleteModuleRecordById(ServiceModel, id);
 };
 
 //  GET ALL USERS
 export const getUsers = async () => {
-  return await find({
-    model: UserModel,
-    select: "firstName lastName email role"
-  });
+  return await listModuleRecords(UserModel, "firstName lastName email role");
 };
 
 //  DELETE USER
 export const deleteUser = async (id) => {
-  return await deleteOne({
-    model: UserModel,
-    filter: { _id: id }
-  });
+  return await deleteModuleRecordById(UserModel, id);
 };
