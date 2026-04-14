@@ -1,15 +1,128 @@
+import { ACCESS_EXPIRE_IN } from "../../../config/config.service.js";
+import {
+  baseRevokeTokenKey,
+  cloud,
+  compareHash,
+  ConflictException,
+  createLoginCredentials,
+  decryption,
+  deleteKey,
+  generateHash,
+  keys,
+  LogoutEnum,
+  NotFoundException,
+  revokeTokenKey,
+  uploadFile,
+} from "../../common/index.js";
+import { findOne, findOneAndUpdate, UserModel } from "../../DB/index.js";
+
+const createRevokeToken = async ({ userId, jti, ttl } = {}) => {
+  await set({
+    key: revokeTokenKey({ userId, jti }),
+    value: jti,
+    ttl,
+  });
+};
+
 export const profile = (user) => {
   return user;
 };
 
+export const profileImage = async (file, user) => {
+  const { secure_url, public_id } = await uploadFile({
+    file,
+    path: `user/${user._id}`,
+  });
+  const user_1 = await findOneAndUpdate({
+    model: UserModel,
+    filter: {
+      _id: user._id,
+    },
+    update: {
+      profilePicture: { secure_url, public_id },
+    },
+    options: {
+      new: false,
+    },
+  });
 
-/*export const profile = (user) => {
-  return {
-    username: `${user.firstName} ${user.lastName}`,
-    email: user.email,
-    phone: user.phone,
-    gender: user.gender,
-    profilePicture: user.profilePicture,
-    address: user.address || "Not set"
-  };
-}; */
+  if (user?.profilePicture?.public_id) {
+    await cloud().uploader.destroy(user.profilePicture.public_id);
+  }
+  return user_1;
+};
+
+export const shareProfile = async (userId) => {
+  const account = await findOne({ model: UserModel, filter: { _id: userId } });
+  if (!account) {
+    throw NotFoundException({ message: "Invalid shared profile" });
+  }
+
+  if (account.phone) {
+    account.phone = await decryption(account.phone);
+  }
+
+  return account;
+};
+
+export const rotateToken = async (user, { jti, iat }, issuer) => {
+  if ((iat + ACCESS_EXPIRE_IN) * 1000 > Date.now() + 30000) {
+    throw ConflictException({ message: "Current access token stile valid" });
+  }
+  await createRevokeToken({
+    userId: sub,
+    jti,
+    ttl: iat + REFRESH_EXPIRE_IN,
+  });
+  return createLoginCredentials(user, issuer);
+};
+
+export const logout = async ({ flag }, user, { jti, iat, sub }) => {
+  let status = 200;
+  switch (flag) {
+    case LogoutEnum.All:
+      user.changeCredentialTime = new Date();
+      await user.save();
+      await deleteKey(await keys(baseRevokeTokenKey(sub)));
+      break;
+
+    default:
+      await createRevokeToken({
+        userId: sub,
+        jti,
+        ttl: iat + REFRESH_EXPIRE_IN,
+      });
+
+      status = 201;
+      break;
+  }
+  return status;
+};
+
+export const updatePassword = async (
+  { oldPassword, password },
+  user,
+  issuer,
+) => {
+  if (
+    !(await compareHash({ plaintext: oldPassword, cipherText: user.password }))
+  ) {
+    throw ConflictException({ message: "Invalid old password" });
+  }
+
+  for (const hash of user.oldPassword || []) {
+    if (await compareHash({ plaintext: password, cipherText: hash })) {
+      throw ConflictException({
+        message: "This password is already used before",
+      });
+    }
+  }
+
+  user.oldPassword.push(user.password);
+  user.password = await generateHash({ plaintext: password });
+  user.changeCredentialTime = new Date();
+  await user.save();
+
+  await deleteKey(await keys(baseRevokeTokenKey(user._id)));
+  return await createLoginCredentials(user, issuer);
+};

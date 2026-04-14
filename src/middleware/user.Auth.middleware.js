@@ -8,7 +8,6 @@ export const authentication = (tokenType = TokenTypeEnum.access) => {
   return async (req, res, next) => {
     try {
       const authHeader = req.headers.authorization;
-      // console.log({authHeader});
       if (!authHeader) {
         throw UnauthorizedException({ message: "Unauthorized" });
       }

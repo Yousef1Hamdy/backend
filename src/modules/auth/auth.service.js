@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   baseRevokeTokenKey,
   compareHash,
   ConflictException,
@@ -24,6 +25,7 @@ import {
   sendEmail,
   set,
   ttl,
+  uploadFile,
 } from "../../common/index.js";
 import {
   createOne,
@@ -81,7 +83,7 @@ export const verifyEmailOtp = async ({
   });
 };
 
-export const signup = async (inputs) => {
+export const signup = async ({inputs , file} = {}) => {
   const { email, password, phone, username, address , role , gender } = inputs;
 
   const checkUserFound = await findOne({
@@ -99,6 +101,24 @@ export const signup = async (inputs) => {
     });
   }
 
+  if (role === RoleEnum.Nurse && !file) {
+    throw BadRequestException({
+      message: "يجب رفع ملف PDF او Word للممرض",
+    });
+  }
+
+  let nurseDocument = null;
+
+  if (file) {
+    const { secure_url, public_id } = await uploadFile({
+      file,
+      path: `nurse/${email}`,
+    });
+
+    nurseDocument = { secure_url, public_id };
+  }
+
+
   const user = await createOne({
     model: UserModel,
     data: {
@@ -110,6 +130,7 @@ export const signup = async (inputs) => {
       address,
       role,
       gender,
+      nurseDocument
     },
   });
 
