@@ -3,6 +3,8 @@ import { successResponse } from "../../common/index.js";
 import { authentication } from "../../middleware/index.js";
 import { authorization } from "../../middleware/authorization.middleware.js";
 import { RoleEnum } from "../../common/index.js";
+import { validation } from "../../middleware/index.js";
+import * as validators from "./admin.validation.js";
 
 import {
   addHospital,
@@ -29,7 +31,7 @@ router.get("/users", async (req, res) => {
 });
 
 //  DELETE USER
-router.delete("/user/:id", async (req, res) => {
+router.delete("/user/:id", validation(validators.deleteEntityById), async (req, res) => {
   await deleteUser(req.params.id);
 
   return successResponse({
@@ -39,7 +41,7 @@ router.delete("/user/:id", async (req, res) => {
 });
 
 //  ADD HOSPITAL
-router.post("/hospital", async (req, res) => {
+router.post("/hospital", validation(validators.addHospital), async (req, res) => {
   const hospital = await addHospital(req.body);
 
   return successResponse({
@@ -50,7 +52,7 @@ router.post("/hospital", async (req, res) => {
 });
 
 //  DELETE HOSPITAL
-router.delete("/hospital/:id", async (req, res) => {
+router.delete("/hospital/:id", validation(validators.deleteEntityById), async (req, res) => {
   await deleteHospital(req.params.id);
 
   return successResponse({
@@ -60,7 +62,7 @@ router.delete("/hospital/:id", async (req, res) => {
 });
 
 // ADD SERVICE
-router.post("/service", async (req, res) => {
+router.post("/service", validation(validators.addService), async (req, res) => {
   const service = await addService(req.body);
 
   return successResponse({
@@ -71,7 +73,7 @@ router.post("/service", async (req, res) => {
 });
 
 //  DELETE SERVICE
-router.delete("/service/:id", async (req, res) => {
+router.delete("/service/:id", validation(validators.deleteEntityById), async (req, res) => {
   await deleteService(req.params.id);
 
   return successResponse({

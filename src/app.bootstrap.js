@@ -13,6 +13,10 @@ import { subscriberRouter } from "./modules/subscriber/index.js";
 import { profileRouter } from "./modules/profile/index.js";
 import {  hospitalRouter, serviceRouter } from "./modules/index.js";
 import { bookingRouter } from "./modules/booking/index.js";
+import { hospitalAccountHomeRouter } from "./modules/hospitalAccountHome/index.js";
+import { hospitalAccountReservationsRouter } from "./modules/hospitalAccountReservations/index.js";
+import { hospitalAccountBookingsRouter } from "./modules/hospitalAccountBookings/index.js";
+import { hospitalAccountProfileRouter } from "./modules/hospitalAccountProfile/index.js";
 
 async function bootstrap() {
   const app = express();
@@ -36,6 +40,10 @@ async function bootstrap() {
   app.use("/subscribe", subscriberRouter);
   app.use("/profile", profileRouter);
   app.use("/booking", bookingRouter);
+  app.use("/hospital-account/home", hospitalAccountHomeRouter);
+  app.use("/hospital-account/reservations", hospitalAccountReservationsRouter);
+  app.use("/hospital-account/bookings", hospitalAccountBookingsRouter);
+  app.use("/hospital-account/profile", hospitalAccountProfileRouter);
  
  //invalid routing
   app.use("/hospitals", hospitalRouter);
