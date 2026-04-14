@@ -146,7 +146,7 @@ export const getHospitalPlacesGroups = async (hospitalId) => {
     .sort({ type: 1, name: 1 })
     .lean();
 
-  return hospitalTypeCards.map((card) => ({
+  const groups = hospitalTypeCards.map((card) => ({
     key: card.key,
     title: card.key === "childcare" ? "حضانات الأطفال" : "عناية مركزة",
     services: services
@@ -157,5 +157,13 @@ export const getHospitalPlacesGroups = async (hospitalId) => {
         type: service.type,
         capacity: service.capacity ?? 0,
       })),
+  }));
+
+  return groups.map((group) => ({
+    ...group,
+    title:
+      group.key === "childcare"
+        ? "\u062d\u0636\u0627\u0646\u0627\u062a \u0627\u0644\u0623\u0637\u0641\u0627\u0644"
+        : "\u0639\u0646\u0627\u064a\u0629 \u0645\u0631\u0643\u0632\u0629",
   }));
 };
