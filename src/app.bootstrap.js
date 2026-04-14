@@ -17,6 +17,7 @@ import { hospitalAccountHomeRouter } from "./modules/hospitalAccountHome/index.j
 import { hospitalAccountReservationsRouter } from "./modules/hospitalAccountReservations/index.js";
 import { hospitalAccountBookingsRouter } from "./modules/hospitalAccountBookings/index.js";
 import { hospitalAccountProfileRouter } from "./modules/hospitalAccountProfile/index.js";
+import { hospitalAccountNotificationsRouter } from "./modules/hospitalAccountNotifications/index.js";
 
 async function bootstrap() {
   const app = express();
@@ -44,6 +45,7 @@ async function bootstrap() {
   app.use("/hospital-account/reservations", hospitalAccountReservationsRouter);
   app.use("/hospital-account/bookings", hospitalAccountBookingsRouter);
   app.use("/hospital-account/profile", hospitalAccountProfileRouter);
+  app.use("/hospital-account/notifications", hospitalAccountNotificationsRouter);
  
  //invalid routing
   app.use("/hospitals", hospitalRouter);

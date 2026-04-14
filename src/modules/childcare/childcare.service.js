@@ -1,4 +1,7 @@
 import {
+  createHospitalNotification,
+} from "../hospitalAccountNotifications/notifications.service.js";
+import {
   ServiceModel,
   BookingModel,
   HospitalModel,
@@ -70,6 +73,21 @@ export const bookChildcare = async (userId, serviceId, details) => {
       serviceType: service.type,
     }
   });
+
+  const notificationPayload = {
+    hospitalId: service.hospital || service.hospitalId,
+    type: "new-reservation",
+    title: `\u0637\u0644\u0628 \u062d\u062c\u0632 \u062c\u062f\u064a\u062f \u0641\u064a ${service.name}`,
+    message: `\u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628 \u062d\u062c\u0632 \u062c\u062f\u064a\u062f \u0644\u0642\u0633\u0645 ${service.name}`,
+    route: "/hospital-account/reservations/childcare",
+    metadata: {
+      serviceId: service._id,
+      reservationType: "childcare",
+      patientName: details.childName,
+    },
+  };
+
+  await createHospitalNotification(notificationPayload);
 
   // return confirmation
   const hospital = await getModuleRecordById({

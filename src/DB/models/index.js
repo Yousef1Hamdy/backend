@@ -6,3 +6,4 @@ export * from "./partner.model.js";
 export * from "./contact.model.js";
 export * from "./subscriber.model.js";
 export * from "./hospitalAccountReservationState.model.js";
+export * from "./notification.model.js";
