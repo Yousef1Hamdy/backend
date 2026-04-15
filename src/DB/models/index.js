@@ -5,3 +5,4 @@ export * from "./booking.model.js"
 export * from "./partner.model.js";
 export * from "./contact.model.js";
 export * from "./subscriber.model.js";
+export * from "./bookingNurse.model.js";

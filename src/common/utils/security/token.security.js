@@ -45,6 +45,12 @@ export const getTokenSignature = async (role) => {
       audience = AudienceEnum.SystemHospital;
 
       break;
+    case RoleEnum.Nurse:
+      accessSignature = Hospital_TOKEN_SECRET_KEY;
+      refreshSignature = Hospital_REFRESH_TOKEN_SECRET_KEY;
+      audience = AudienceEnum.Nurse;
+
+      break;
     default:
       accessSignature = USER_TOKEN_SECRET_KEY;
       refreshSignature = USER_REFRESH_TOKEN_SECRET_KEY;
@@ -63,6 +69,9 @@ export const getSignatureLevel = async (audienceType) => {
       break;
     case AudienceEnum.SystemHospital:
       signatureLevel = RoleEnum.Hospital;
+      break;
+    case AudienceEnum.Nurse:
+      signatureLevel = RoleEnum.Nurse;
       break;
     default:
       signatureLevel = RoleEnum.User;

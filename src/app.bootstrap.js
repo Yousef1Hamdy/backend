@@ -11,7 +11,7 @@ import { contactRouter } from "./modules/contact/index.js";
 import { adminRouter } from "./modules/admin/index.js";
 import { subscriberRouter } from "./modules/subscriber/index.js";
 import { profileRouter } from "./modules/profile/index.js";
-import {  hospitalRouter, serviceRouter } from "./modules/index.js";
+import {  BookingStaffRouter, hospitalRouter, serviceRouter } from "./modules/index.js";
 import { bookingRouter } from "./modules/booking/index.js";
 
 async function bootstrap() {
@@ -36,6 +36,7 @@ async function bootstrap() {
   app.use("/subscribe", subscriberRouter);
   app.use("/profile", profileRouter);
   app.use("/booking", bookingRouter);
+  app.use("/booking-staff", BookingStaffRouter);
  
  //invalid routing
   app.use("/hospitals", hospitalRouter);
