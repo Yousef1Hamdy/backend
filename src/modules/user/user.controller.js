@@ -26,7 +26,6 @@ const router = Router();
 router.get(
   "/profile",
   authentication(),
-  authorization(endpoint.profile),
   async (req, res, next) => {
     const account = await profile(req.user);
     return successResponse({
