@@ -190,4 +190,30 @@ export const generalValidationFields = {
       size: joi.number().required(),
     });
   },
+
+  patientName: joi.string().min(3).max(100).messages({
+    "string.base": "اسم المريض لازم يكون نص",
+    "string.empty": "اسم المريض مطلوب",
+    "string.min": "اسم المريض لازم يكون على الأقل 3 حروف",
+    "string.max": "اسم المريض لا يزيد عن 100 حرف",
+    "any.required": "اسم المريض مطلوب",
+  }),
+
+  medicalCondition: joi.string().min(10).messages({
+    "string.base": "الحالة الطبية لازم تكون نص",
+    "string.empty": "الحالة الطبية مطلوبة",
+    "string.min": "يرجى كتابة وصف أوضح للحالة الطبية (10 أحرف على الأقل)",
+    "any.required": "الحالة الطبية مطلوبة",
+  }),
+
+  // قمت بتسميتها homeCareServiceType لتمييزها عن typeService الخاصة بالمستشفيات
+  homeCareServiceType: joi
+    .string()
+    .valid("elderly_care", "post_operative_care", "newborn_care")
+    .messages({
+      "string.base": "نوع الخدمة لازم يكون نص",
+      "any.only": "نوع الخدمة غير صالح. يرجى اختيار إحدى الخدمات المتاحة.",
+      "string.empty": "نوع الخدمة مطلوب.",
+      "any.required": "حقل نوع الخدمة مطلوب.",
+    }),
 };

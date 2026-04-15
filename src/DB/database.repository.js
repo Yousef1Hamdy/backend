@@ -51,6 +51,7 @@ export const find = async ({ filter, options, select, model } = {}) => {
   return await doc.exec();
 };
 
+
 export const paginate = async ({
   filter = {},
   options = {},
@@ -63,14 +64,25 @@ export const paginate = async ({
   let pages = undefined;
   if (page !== "all") {
     page = Math.floor(page < 1 ? 1 : page);
-    options.limit = Math.floor(size < 1 || !size ? 5 : size);
-    options.skip = (page - 1) * options.limit;
+    const limit = Math.floor(size < 1 || !size ? 5 : size);
+    const skip = (page - 1) * limit;
+
+    options.limit = limit;
+    options.skip = skip;
 
     docsCount = await model.countDocuments(filter);
-    pages = Math.ceil(docsCount / options.limit);
+    pages = Math.ceil(docsCount / limit);
   }
 
-  const result = await find({ model, filter, select, options });
+  options.lean = options.lean ?? false;
+
+  const result = await find({
+    model,
+    filter,
+    select,
+    options,
+  });
+
   return {
     docsCount,
     limit: options.limit,
