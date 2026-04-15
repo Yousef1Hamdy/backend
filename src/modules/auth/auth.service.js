@@ -312,6 +312,9 @@ export const login = async (inputs, issuer) => {
     issuer,
   );
 
+  user.lastSeenAt = new Date();
+  await user.save();
+
   return {
     access_token,
     refresh_token,

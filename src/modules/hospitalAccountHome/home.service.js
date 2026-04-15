@@ -268,38 +268,6 @@ export const updateHospitalAccountPlaces = async (
     options: { new: true, runValidators: true },
   });
 
-  const { createHospitalNotification } = await import(
-    "../hospitalAccountNotifications/notifications.service.js"
-  );
-
-  if (updatedService.capacity === 1) {
-    await createHospitalNotification({
-      hospitalId,
-      type: "capacity-warning",
-      title: `\u0628\u0627\u0642\u064a \u0645\u0643\u0627\u0646 \u0648\u0627\u062d\u062f \u0641\u064a ${updatedService.name}`,
-      message: `\u0627\u0644\u0633\u0639\u0629 \u0627\u0644\u062d\u0627\u0644\u064a\u0629 \u0641\u064a ${updatedService.name} \u0623\u0635\u0628\u062d\u062a 1`,
-      route: "/hospital-account/profile/places",
-      metadata: {
-        serviceId: updatedService._id,
-        capacity: updatedService.capacity,
-      },
-    });
-  }
-
-  if (updatedService.capacity === 0) {
-    await createHospitalNotification({
-      hospitalId,
-      type: "capacity-full",
-      title: `${updatedService.name} \u0645\u0645\u062a\u0644\u0626`,
-      message: `\u0644\u0627 \u062a\u0648\u062c\u062f \u0623\u0645\u0627\u0643\u0646 \u0645\u062a\u0627\u062d\u0629 \u0627\u0644\u0622\u0646 \u0641\u064a ${updatedService.name}`,
-      route: "/hospital-account/profile/places",
-      metadata: {
-        serviceId: updatedService._id,
-        capacity: updatedService.capacity,
-      },
-    });
-  }
-
   return {
     _id: updatedService._id,
     name: updatedService.name,
