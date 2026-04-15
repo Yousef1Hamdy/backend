@@ -5,6 +5,10 @@ import {
   UnauthorizedException,
 } from "../common/index.js";
 
+import { UserModel } from "../DB/index.js";
+
+
+
 export const authentication = (tokenType = TokenTypeEnum.access) => {
   return async (req, res, next) => {
     try {
@@ -22,6 +26,10 @@ export const authentication = (tokenType = TokenTypeEnum.access) => {
         token: credential,
         tokenType,
       });
+      await UserModel.updateOne(
+        { _id: user._id },
+        { $set: { lastSeenAt: new Date() } },
+      );
       req.user = user;
       req.decoded = decoded;
       next();

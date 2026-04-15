@@ -76,6 +76,8 @@ const userSchema = new Schema(
     confirmEmail: Date,
 
     changeCredentialTime: Date,
+
+    lastSeenAt: Date,
   },
   {
     timestamps: true,
