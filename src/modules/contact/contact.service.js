@@ -1,13 +1,14 @@
 import { ContactModel } from "../../DB/index.js";
-import { createOne } from "../../DB/index.js";
 import nodemailer from "nodemailer";
+import { createModuleRecord } from "../shared/module.shared.js";
 
 export const sendMessage = async ({ userId, email, message }) => {
 
   //  save in DB
-  const contact = await createOne({
-    model: ContactModel,
-    data: { userId, email, message }
+  const contact = await createModuleRecord(ContactModel, {
+    userId,
+    email,
+    message,
   });
 
   //  send email to YOU

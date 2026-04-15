@@ -2,6 +2,12 @@ import mongoose from "mongoose";
 
 const hospitalSchema = new mongoose.Schema(
   {
+    accountId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      unique: true,
+      sparse: true,
+    },
     name: {
       type: String,
       required: [true, "اسم المستشفى مطلوب"],
