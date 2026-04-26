@@ -39,7 +39,7 @@ export const generalValidationFields = {
   password: joi
     .string()
     .pattern(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!#%*?&]{8,}$/,
     )
     .messages({
       "string.base": "كلمة المرور لازم تكون نص",
