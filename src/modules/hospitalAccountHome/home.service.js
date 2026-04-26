@@ -20,8 +20,168 @@ import {
   mapReservation,
 } from "../hospitalAccountShared/hospitalAccount.shared.js";
 
-export const getHospitalAccountHome = async (hospitalId) => {
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
+const toUtcStartOfDay = (value = new Date()) => {
+  const date = new Date(value);
+
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+};
+
+const shiftUtcDays = (value, days) =>
+  new Date(toUtcStartOfDay(value).getTime() + days * DAY_IN_MS);
+
+const formatDateKey = (value) => {
+  const date = new Date(value);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(
+    2,
+    "0",
+  )}-${String(date.getUTCDate()).padStart(2, "0")}`;
+};
+
+const formatArabicWeekday = (value) =>
+  new Intl.DateTimeFormat("ar-EG", {
+    weekday: "long",
+    timeZone: "UTC",
+  }).format(new Date(value));
+
+const normalizeStatus = (booking, decisionState) =>
+  decisionState?.status || booking.status || BookingEnum.Pending;
+
+const buildDateContext = (dateInput) => {
+  const selectedDay = dateInput ? toUtcStartOfDay(dateInput) : toUtcStartOfDay();
+  const nextDay = shiftUtcDays(selectedDay, 1);
+  const capacityAsOf = new Date(nextDay.getTime() - 1);
+  const weekStart = shiftUtcDays(selectedDay, -6);
+  const nextMonth = new Date(
+    Date.UTC(
+      selectedDay.getUTCFullYear(),
+      selectedDay.getUTCMonth() + 1,
+      1,
+    ),
+  );
+  const monthWindowStart = new Date(
+    Date.UTC(
+      selectedDay.getUTCFullYear(),
+      selectedDay.getUTCMonth() - 5,
+      1,
+    ),
+  );
+
+  return {
+    selectedDay,
+    nextDay,
+    capacityAsOf,
+    weekStart,
+    nextMonth,
+    monthWindowStart,
+    selectedDateKey: formatDateKey(selectedDay),
+  };
+};
+
+const buildEmptyTypeTotals = () =>
+  Object.values(TypeServiceEnum).reduce((accumulator, type) => {
+    accumulator[type] = {
+      total: 0,
+      pending: 0,
+      confirmed: 0,
+      refused: 0,
+    };
+
+    return accumulator;
+  }, {});
+
+const buildCapacitySummary = (placeGroups) => ({
+  totalCapacity: placeGroups.reduce(
+    (sum, group) => sum + (group.totalCapacity || 0),
+    0,
+  ),
+  childcareCapacity:
+    placeGroups.find((group) => group.key === "childcare")?.totalCapacity || 0,
+  healthcareCapacity:
+    placeGroups.find((group) => group.key === "healthcare")?.totalCapacity || 0,
+});
+
+const buildWeeklyBuckets = ({ services, weeklyBookings, weekStart }) => {
+  const buckets = Array.from({ length: 7 }, (_, index) => {
+    const day = shiftUtcDays(weekStart, index);
+    return {
+      date: formatDateKey(day),
+      dayLabel: formatArabicWeekday(day),
+      counts: services.reduce((accumulator, service) => {
+        accumulator[service._id.toString()] = 0;
+        return accumulator;
+      }, {}),
+    };
+  });
+
+  const bucketByDate = new Map(buckets.map((bucket) => [bucket.date, bucket]));
+
+  for (const item of weeklyBookings) {
+    const bucket = bucketByDate.get(item._id.date);
+    const serviceId = item._id.serviceId?.toString();
+
+    if (!bucket || !serviceId) {
+      continue;
+    }
+
+    bucket.counts[serviceId] = item.total;
+  }
+
+  return buckets;
+};
+
+const buildWeeklyReservationsChart = ({ services, weeklyBookings, weekStart }) => {
+  const buckets = buildWeeklyBuckets({ services, weeklyBookings, weekStart });
+
+  return {
+    labels: buckets.map((bucket) => bucket.dayLabel),
+    dates: buckets.map((bucket) => bucket.date),
+    series: services.map((service) => ({
+      serviceId: service._id,
+      name: service.name,
+      type: service.type,
+      data: buckets.map((bucket) => bucket.counts[service._id.toString()] || 0),
+    })),
+  };
+};
+
+const buildSectionOccupancyChart = ({ serviceStatsMap, placeGroups }) => {
+  const orderedServices = placeGroups.flatMap((group) =>
+    group.services.map((service) => ({
+      serviceId: service._id.toString(),
+      name: service.name,
+      type: service.type,
+      groupKey: group.key,
+      availableCapacity: service.capacity ?? 0,
+      occupied:
+        serviceStatsMap.get(service._id.toString())?.totalBookings || 0,
+    })),
+  );
+
+  return {
+    labels: orderedServices.map((service) => service.name),
+    services: orderedServices,
+    series: [
+      {
+        key: "occupied",
+        label: "occupied",
+        data: orderedServices.map((service) => service.occupied),
+      },
+      {
+        key: "available",
+        label: "available",
+        data: orderedServices.map((service) => service.availableCapacity),
+      },
+    ],
+  };
+};
+
+export const getHospitalAccountHome = async (hospitalId, { date } = {}) => {
   const hospital = await ensureHospitalExists(hospitalId);
+  const dateContext = buildDateContext(date);
 
   const services = await find({
     model: ServiceModel,
@@ -30,41 +190,64 @@ export const getHospitalAccountHome = async (hospitalId) => {
     options: { lean: true },
   });
 
-  const [allBookings, bookingStats, monthlyBookings] = await Promise.all([
-    loadHospitalBookings(hospitalId),
+  const selectedDayFilter = {
+    date: {
+      $gte: dateContext.selectedDay,
+      $lt: dateContext.nextDay,
+    },
+  };
+
+  const [
+    selectedBookings,
+    weeklyBookings,
+    monthlyBookings,
+    recentNotifications,
+    unreadNotifications,
+    placeGroups,
+  ] = await Promise.all([
+    loadHospitalBookings(hospitalId, selectedDayFilter),
     BookingModel.aggregate([
-      { $match: { hospitalId: hospital._id } },
       {
-        $lookup: {
-          from: "Services",
-          localField: "serviceId",
-          foreignField: "_id",
-          as: "service",
-        },
-      },
-      {
-        $unwind: {
-          path: "$service",
-          preserveNullAndEmptyArrays: true,
+        $match: {
+          hospitalId: hospital._id,
+          date: {
+            $gte: dateContext.weekStart,
+            $lt: dateContext.nextDay,
+          },
         },
       },
       {
         $group: {
           _id: {
-            status: "$status",
-            type: "$service.type",
+            date: {
+              $dateToString: {
+                format: "%Y-%m-%d",
+                date: "$date",
+                timezone: "UTC",
+              },
+            },
+            serviceId: "$serviceId",
           },
-          count: { $sum: 1 },
+          total: { $sum: 1 },
         },
       },
+      { $sort: { "_id.date": 1 } },
     ]),
     BookingModel.aggregate([
-      { $match: { hospitalId: hospital._id } },
+      {
+        $match: {
+          hospitalId: hospital._id,
+          date: {
+            $gte: dateContext.monthWindowStart,
+            $lt: dateContext.nextMonth,
+          },
+        },
+      },
       {
         $group: {
           _id: {
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" },
+            year: { $year: "$date" },
+            month: { $month: "$date" },
           },
           total: { $sum: 1 },
           pending: {
@@ -79,31 +262,25 @@ export const getHospitalAccountHome = async (hospitalId) => {
           },
         },
       },
-      { $sort: { "_id.year": -1, "_id.month": -1 } },
-      { $limit: 6 },
       { $sort: { "_id.year": 1, "_id.month": 1 } },
     ]),
+    NotificationModel.find({ hospitalId }).sort({ createdAt: -1 }).limit(5).lean(),
+    NotificationModel.countDocuments({
+      hospitalId,
+      isRead: false,
+    }),
+    getHospitalPlacesGroups(hospitalId, { asOfDate: dateContext.capacityAsOf }),
   ]);
-  const recentNotifications = await NotificationModel.find({ hospitalId })
-    .sort({ createdAt: -1 })
-    .limit(5)
-    .lean();
-  const unreadNotifications = await NotificationModel.countDocuments({
-    hospitalId,
-    isRead: false,
-  });
 
   const decisionStatesMap = await loadDecisionStateMap(
     hospitalId,
-    allBookings.map((booking) => booking._id),
+    selectedBookings.map((booking) => booking._id),
   );
 
-  const recentReservations = await Promise.all(
-    allBookings
-      .slice(0, 6)
-      .map((booking) =>
-        mapReservation(booking, decisionStatesMap.get(String(booking._id))),
-      ),
+  const selectedReservations = await Promise.all(
+    selectedBookings.map((booking) =>
+      mapReservation(booking, decisionStatesMap.get(String(booking._id))),
+    ),
   );
 
   const statusTotals = {
@@ -111,55 +288,59 @@ export const getHospitalAccountHome = async (hospitalId) => {
     [BookingEnum.Confirmed]: 0,
     refused: 0,
   };
+  const typeTotals = buildEmptyTypeTotals();
+  const serviceStatsMap = new Map(
+    services.map((service) => [
+      service._id.toString(),
+      {
+        serviceId: service._id,
+        name: service.name,
+        type: service.type,
+        totalBookings: 0,
+        pendingBookings: 0,
+        confirmedBookings: 0,
+        refusedBookings: 0,
+      },
+    ]),
+  );
 
-  const typeTotals = Object.values(TypeServiceEnum).reduce((accumulator, type) => {
-    accumulator[type] = {
-      total: 0,
-      pending: 0,
-      confirmed: 0,
-      refused: 0,
-    };
+  for (const booking of selectedBookings) {
+    const decisionState = decisionStatesMap.get(String(booking._id));
+    const status = normalizeStatus(booking, decisionState);
+    const type = booking.serviceId?.type || booking.serviceType || null;
+    const serviceId = booking.serviceId?._id?.toString() || booking.serviceId?.toString();
 
-    return accumulator;
-  }, {});
-
-  for (const item of bookingStats) {
-    const status = item?._id?.status;
-    const type = item?._id?.type;
-    const count = item?.count || 0;
-
-    if (status && Object.hasOwn(statusTotals, status)) {
-      statusTotals[status] += count;
+    if (Object.hasOwn(statusTotals, status)) {
+      statusTotals[status] += 1;
     }
 
     if (type && typeTotals[type]) {
-      typeTotals[type].total += count;
+      typeTotals[type].total += 1;
 
       if (status === BookingEnum.Pending) {
-        typeTotals[type].pending += count;
+        typeTotals[type].pending += 1;
+      } else if (status === BookingEnum.Confirmed) {
+        typeTotals[type].confirmed += 1;
+      } else if (status === "refused") {
+        typeTotals[type].refused += 1;
       }
+    }
 
-      if (status === BookingEnum.Confirmed) {
-        typeTotals[type].confirmed += count;
+    if (serviceId && serviceStatsMap.has(serviceId)) {
+      const serviceStats = serviceStatsMap.get(serviceId);
+      serviceStats.totalBookings += 1;
+
+      if (status === BookingEnum.Pending) {
+        serviceStats.pendingBookings += 1;
+      } else if (status === BookingEnum.Confirmed) {
+        serviceStats.confirmedBookings += 1;
+      } else if (status === "refused") {
+        serviceStats.refusedBookings += 1;
       }
     }
   }
 
-  for (const reservation of recentReservations) {
-    if (reservation.status === "refused") {
-      statusTotals.refused += 1;
-
-      if (reservation.service.type && typeTotals[reservation.service.type]) {
-        typeTotals[reservation.service.type].refused += 1;
-        typeTotals[reservation.service.type].pending = Math.max(
-          0,
-          typeTotals[reservation.service.type].pending - 1,
-        );
-      }
-    }
-  }
-
-  const reservationOptions = hospitalTypeCards.map((card) => ({
+  const cards = hospitalTypeCards.map((card) => ({
     key: card.key,
     title: card.title,
     totalBookings: card.types.reduce(
@@ -180,19 +361,33 @@ export const getHospitalAccountHome = async (hospitalId) => {
     ),
   }));
 
+  const capacitySummary = buildCapacitySummary(placeGroups);
+  const weeklyReservationsChart = buildWeeklyReservationsChart({
+    services,
+    weeklyBookings,
+    weekStart: dateContext.weekStart,
+  });
+  const sectionOccupancyChart = buildSectionOccupancyChart({
+    serviceStatsMap,
+    placeGroups,
+  });
+
   return {
     hospital,
+    filter: {
+      date: dateContext.selectedDateKey,
+    },
     overview: {
       totalServices: services.length,
-      totalBookings: allBookings.length,
-      pendingBookings:
-        statusTotals[BookingEnum.Pending] - statusTotals.refused,
+      totalBookings: selectedBookings.length,
+      pendingBookings: statusTotals[BookingEnum.Pending],
       confirmedBookings: statusTotals[BookingEnum.Confirmed],
       refusedBookings: statusTotals.refused,
     },
-    cards: reservationOptions,
-    availablePlaces: await getHospitalPlacesGroups(hospitalId),
-    bookingOptions: reservationOptions.map((option) => ({
+    cards,
+    availablePlaces: placeGroups,
+    capacitySummary,
+    bookingOptions: cards.map((option) => ({
       key: option.key,
       title: `${option.title} accepted`,
       totalBookings: option.confirmedBookings,
@@ -208,12 +403,16 @@ export const getHospitalAccountHome = async (hospitalId) => {
         createdAt: notification.createdAt,
       })),
     },
-    requests: recentReservations,
+    requests: selectedReservations.slice(0, 6),
+    charts: {
+      weeklyReservations: weeklyReservationsChart,
+      dailySectionOccupancy: sectionOccupancyChart,
+    },
     analytics: {
       bookingsByStatus: [
         {
           status: BookingEnum.Pending,
-          count: Math.max(0, statusTotals[BookingEnum.Pending] - statusTotals.refused),
+          count: statusTotals[BookingEnum.Pending],
         },
         {
           status: BookingEnum.Confirmed,
@@ -228,6 +427,24 @@ export const getHospitalAccountHome = async (hospitalId) => {
         typeKey,
         typeLabel,
         count: typeTotals[typeLabel]?.total || 0,
+      })),
+      occupancyByService: Array.from(serviceStatsMap.values()),
+      currentCapacityByService: placeGroups.flatMap((group) =>
+        group.services.map((service) => ({
+          ...service,
+          groupKey: group.key,
+          groupTitle: group.title,
+        })),
+      ),
+      weeklyBookings: weeklyReservationsChart.dates.map((dateValue, index) => ({
+        date: dateValue,
+        dayLabel: weeklyReservationsChart.labels[index],
+        services: weeklyReservationsChart.series.map((series) => ({
+          serviceId: series.serviceId,
+          name: series.name,
+          type: series.type,
+          bookings: series.data[index],
+        })),
       })),
       monthlyBookings: monthlyBookings.map((item) => ({
         month: `${item._id.year}-${String(item._id.month).padStart(2, "0")}`,

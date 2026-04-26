@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { TypeServiceEnum } from "../../common/index.js";
+import { recordServiceCapacitySnapshot } from "../../common/service/capacity-history.service.js";
 
 const serviceSchema = new mongoose.Schema(
   {
@@ -91,6 +92,24 @@ serviceSchema.pre("save", async function capturePreviousCapacity() {
 });
 
 serviceSchema.post("save", async function notifyOnSave(doc) {
+  if (
+    doc.capacity !== undefined &&
+    doc.capacity !== null &&
+    (doc.isNew || doc.$locals?.previousCapacity !== undefined)
+  ) {
+    await recordServiceCapacitySnapshot({
+      serviceId: doc._id,
+      hospitalId: doc.hospital,
+      capacity: doc.capacity,
+      effectiveAt: new Date(),
+      source: doc.isNew ? "service-created" : "service-save",
+      metadata:
+        doc.$locals?.previousCapacity === undefined
+          ? undefined
+          : { previousCapacity: doc.$locals.previousCapacity },
+    });
+  }
+
   if (doc.isNew || doc.$locals?.previousCapacity === undefined) {
     return;
   }
@@ -114,14 +133,33 @@ serviceSchema.pre("findOneAndUpdate", async function captureCapacityUpdate() {
   this.$locals = this.$locals || {};
   this.$locals.previousService = await this.model
     .findOne(this.getFilter())
-    .select("capacity")
+    .select("capacity hospital")
     .lean();
 });
 
 serviceSchema.post("findOneAndUpdate", async function notifyOnUpdate(doc) {
   const previousCapacity = this.$locals?.previousService?.capacity;
+  const nextCapacity = doc?.capacity;
 
-  if (!doc || previousCapacity === undefined) {
+  if (!doc || nextCapacity === undefined) {
+    return;
+  }
+
+  if (previousCapacity !== undefined && previousCapacity === nextCapacity) {
+    return;
+  }
+
+  await recordServiceCapacitySnapshot({
+    serviceId: doc._id,
+    hospitalId: doc.hospital,
+    capacity: nextCapacity,
+    effectiveAt: new Date(),
+    source: "service-update",
+    metadata:
+      previousCapacity === undefined ? undefined : { previousCapacity },
+  });
+
+  if (previousCapacity === undefined) {
     return;
   }
 

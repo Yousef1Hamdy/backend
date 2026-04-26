@@ -10,3 +10,4 @@ export * from "./bookingNurse.model.js";
 
 export * from "./hospitalAccountReservationState.model.js";
 export * from "./notification.model.js";
+export * from "./serviceCapacityHistory.model.js";

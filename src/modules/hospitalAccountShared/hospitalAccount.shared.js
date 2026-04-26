@@ -4,6 +4,7 @@ import {
   TypeServiceEnum,
   decryption,
 } from "../../common/index.js";
+import { getServiceCapacityMapAtDate } from "../../common/service/capacity-history.service.js";
 import {
   BookingModel,
   ServiceModel,
@@ -61,8 +62,8 @@ export const getHospitalIdByAccountId = async (accountId) => {
   return hospital;
 };
 
-export const loadHospitalBookings = async (hospitalId) => {
-  return await BookingModel.find({ hospitalId })
+export const loadHospitalBookings = async (hospitalId, additionalFilter = {}) => {
+  return await BookingModel.find({ hospitalId, ...additionalFilter })
     .populate("userId", "firstName lastName phone")
     .populate("serviceId", "name type description")
     .sort({ createdAt: -1 })
@@ -140,11 +141,19 @@ export const mapReservation = async (booking, decisionState) => {
   };
 };
 
-export const getHospitalPlacesGroups = async (hospitalId) => {
+export const getHospitalPlacesGroups = async (hospitalId, { asOfDate } = {}) => {
   const services = await ServiceModel.find({ hospital: hospitalId })
     .select("name type capacity")
     .sort({ type: 1, name: 1 })
     .lean();
+  const serviceIds = services.map((service) => service._id);
+  const capacityMap = asOfDate
+    ? await getServiceCapacityMapAtDate({
+        hospitalId,
+        serviceIds,
+        date: asOfDate,
+      })
+    : new Map();
 
   const groups = hospitalTypeCards.map((card) => ({
     key: card.key,
@@ -155,12 +164,18 @@ export const getHospitalPlacesGroups = async (hospitalId) => {
         _id: service._id,
         name: service.name,
         type: service.type,
-        capacity: service.capacity ?? 0,
+        capacity:
+          capacityMap.get(service._id.toString())?.capacity ?? service.capacity ?? 0,
       })),
   }));
 
   return groups.map((group) => ({
     ...group,
+    totalCapacity: group.services.reduce(
+      (sum, service) => sum + (service.capacity ?? 0),
+      0,
+    ),
+    totalServices: group.services.length,
     title:
       group.key === "childcare"
         ? "\u062d\u0636\u0627\u0646\u0627\u062a \u0627\u0644\u0623\u0637\u0641\u0627\u0644"
