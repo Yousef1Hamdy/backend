@@ -18,9 +18,10 @@ router.get(
   "/",
   authentication(),
   authorization([RoleEnum.Hospital]),
+  validation(validators.getHospitalAccountHome),
   async (req, res) => {
     const hospital = await getHospitalIdByAccountId(req.user._id);
-    const home = await getHospitalAccountHome(hospital._id);
+    const home = await getHospitalAccountHome(hospital._id, req.query);
 
     return successResponse({
       res,
@@ -30,7 +31,7 @@ router.get(
   },
 );
 
-router.get(
+router.patch(
   "/places/:serviceId",
   authentication(),
   authorization([RoleEnum.Hospital]),
@@ -57,7 +58,7 @@ router.get(
   authorization([RoleEnum.Admin, RoleEnum.Hospital]),
   validation(validators.getHospitalHome),
   async (req, res) => {
-    const home = await getHospitalAccountHome(req.params.hospitalId);
+    const home = await getHospitalAccountHome(req.params.hospitalId, req.query);
 
     return successResponse({
       res,
@@ -73,7 +74,10 @@ router.get(
   authorization([RoleEnum.Admin, RoleEnum.Hospital]),
   validation(validators.getHospitalHome),
   async (req, res) => {
-    const landingPage = await getHospitalAccountHome(req.params.hospitalId);
+    const landingPage = await getHospitalAccountHome(
+      req.params.hospitalId,
+      req.query,
+    );
 
     return successResponse({
       res,

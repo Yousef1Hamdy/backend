@@ -8,6 +8,7 @@ import {
   findByIdAndUpdate,
   findOne,
   HospitalModel,
+  ServiceCapacityHistoryModel,
   ServiceModel,
   UserModel,
 } from "../../DB/index.js";
@@ -21,7 +22,7 @@ export const getAllServices = async () => {
   });
 
   if (!services) {
-    throw NotFoundException({ message: "لا يوجد خدمات" });
+    throw NotFoundException({ message: "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø®Ø¯Ù…Ø§Øª" });
   }
 
   return services;
@@ -39,13 +40,12 @@ export const getAllServicesByType = async (type) => {
     },
   });
 
-  // فلترة المستشفيات اللي عندها خدمات فعلاً
   const filtered = hospitals.filter(
     (hospital) => hospital.services && hospital.services.length > 0,
   );
 
   if (!filtered.length) {
-    throw NotFoundException({ message: "لا يوجد خدمات" });
+    throw NotFoundException({ message: "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø®Ø¯Ù…Ø§Øª" });
   }
 
   return filtered;
@@ -56,7 +56,7 @@ export const createService = async (inputs, type) => {
 
   const account = await findById({ model: HospitalModel, id: hospital });
   if (!account) {
-    throw NotFoundException({ message: "المستشفى غير موجود" });
+    throw NotFoundException({ message: "Ø§Ù„Ù…Ø³ØªØ´ÙÙ‰ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯" });
   }
 
   const service = await createOne({
@@ -77,7 +77,7 @@ export const getServiceById = async (id) => {
   });
 
   if (!service) {
-    throw NotFoundException({ message: "الخدمة غير موجودة" });
+    throw NotFoundException({ message: "Ø§Ù„Ø®Ø¯Ù…Ø© ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©" });
   }
   return service;
 };
@@ -91,21 +91,27 @@ export const updateService = async (inputs, id) => {
   });
 
   if (!service) {
-    throw NotFoundException({ message: "الخدمه غير موجودة" });
+    throw NotFoundException({ message: "Ø§Ù„Ø®Ø¯Ù…Ù‡ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©" });
   }
 
   return service;
 };
 
 export const deleteService = async (id) => {
-  const result = await findByIdAndDelete({
+  const service = await findById({
     model: ServiceModel,
     id,
   });
 
-  if (result.deletedCount === 0) {
-    throw NotFoundException({ message: "الخدمه غير موجودة" });
+  if (!service) {
+    throw NotFoundException({ message: "Ø§Ù„Ø®Ø¯Ù…Ù‡ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯Ø©" });
   }
 
-  return { message: "تم حذف الخدمه بنجاح" };
+  await findByIdAndDelete({
+    model: ServiceModel,
+    id,
+  });
+  await ServiceCapacityHistoryModel.deleteMany({ serviceId: id });
+
+  return { message: "ØªÙ… Ø­Ø°Ù Ø§Ù„Ø®Ø¯Ù…Ù‡ Ø¨Ù†Ø¬Ø§Ø­" };
 };

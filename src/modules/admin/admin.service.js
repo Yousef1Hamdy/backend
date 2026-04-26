@@ -9,6 +9,7 @@ import {
   HospitalModel,
   PartnerModel,
   ServiceModel,
+  ServiceCapacityHistoryModel,
   UserModel,
   findOneAndUpdate,
 } from "../../DB/index.js";
@@ -81,6 +82,11 @@ export const addHospital = async (data) => {
     address,
     role: RoleEnum.Hospital,
     gender,
+    profilePicture: logo
+      ? {
+          secure_url: logo,
+        }
+      : undefined,
     confirmEmail: new Date(),
     lastSeenAt: null,
   });
@@ -116,6 +122,7 @@ export const deleteHospital = async (id) => {
   }
 
   await ServiceModel.deleteMany({ hospital: id });
+  await ServiceCapacityHistoryModel.deleteMany({ hospitalId: id });
   await PartnerModel.deleteOne({ name: hospital.name, type: "hospital" });
 
   if (hospital.accountId) {
@@ -147,6 +154,7 @@ export const deleteService = async (id) => {
   }
 
   await ServiceModel.deleteOne({ _id: id });
+  await ServiceCapacityHistoryModel.deleteMany({ serviceId: id });
 
   return { message: "Service deleted" };
 };
@@ -343,6 +351,11 @@ export const updateHospital = async (id, data) => {
     if (data.phone) userUpdate.phone = await encryption(data.phone);
     if (data.address) userUpdate.address = data.address;
     if (data.gender !== undefined) userUpdate.gender = data.gender;
+    if (data.logo) {
+      userUpdate.profilePicture = {
+        secure_url: data.logo,
+      };
+    }
     if (data.password) {
       userUpdate.password = await generateHash({ plaintext: data.password });
     }

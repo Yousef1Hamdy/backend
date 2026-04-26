@@ -1,5 +1,5 @@
 import { BookingEnum, NotFoundException } from "../../common/index.js";
-import { BookingModel } from "../../DB/index.js";
+import { BookingModel, ServiceModel } from "../../DB/index.js";
 import { HospitalAccountReservationStateModel } from "../../DB/models/hospitalAccountReservationState.model.js";
 import {
   ensureHospitalExists,
@@ -77,6 +77,15 @@ export const removeAcceptedHospitalAccountReservation = async (
   if (!isConfirmedReservation(booking, decisionState)) {
     throw NotFoundException({ message: "accepted reservation not found" });
   }
+
+  await ServiceModel.findOneAndUpdate(
+    {
+      _id: booking.serviceId?._id || booking.serviceId,
+      hospital: hospitalId,
+    },
+    { $inc: { capacity: 1 } },
+    { new: true, runValidators: true },
+  );
 
   await HospitalAccountReservationStateModel.deleteOne({
     hospitalId,
