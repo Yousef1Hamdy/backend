@@ -7,6 +7,7 @@ import { authRouter } from "./modules/auth/index.js";
 import { userRouter } from "./modules/user/index.js";
 import { homeRouter } from "./modules/home/index.js";
 import { childcareRouter } from "./modules/childcare/index.js";
+import { healthcareRouter } from "./modules/healthcare/index.js";
 import { contactRouter } from "./modules/contact/index.js";
 import { adminRouter } from "./modules/admin/index.js";
 import { subscriberRouter } from "./modules/subscriber/index.js";
@@ -40,6 +41,7 @@ async function bootstrap() {
   app.use("/user", userRouter);
   app.use("/home", homeRouter);
   app.use("/childcare", childcareRouter);
+  app.use("/healthcare", healthcareRouter);
   app.use("/contact", contactRouter);
   app.use("/admin", adminRouter);
   app.use("/subscribe", subscriberRouter);
