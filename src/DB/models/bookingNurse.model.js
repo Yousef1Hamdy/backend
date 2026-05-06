@@ -87,6 +87,52 @@ bookingSchema.virtual("patient", {
   justOne: true,
 });
 
+bookingSchema.pre("findOneAndUpdate", async function capturePreviousStatus() {
+  const current = await this.model.findOne(this.getFilter()).select("status userId serviceType");
+  this._previousBookingState = current
+    ? {
+        status: current.status,
+        userId: current.userId,
+        serviceType: current.serviceType,
+      }
+    : null;
+});
+
+bookingSchema.post("findOneAndUpdate", async function notifyUserOnDecision(doc) {
+  if (!doc) {
+    return;
+  }
+
+  const previous = this._previousBookingState;
+
+  if (!previous || previous.status === doc.status) {
+    return;
+  }
+
+  if (![statusEnum.confirmed, "refused"].includes(doc.status)) {
+    return;
+  }
+
+  const { createUserNotification } = await import(
+    "../../modules/user/user.notifications.service.js"
+  );
+
+  const decisionLabel = doc.status === statusEnum.confirmed ? "قبول" : "رفض";
+
+  await createUserNotification({
+    userId: doc.userId,
+    type: "nurse-booking-status-updated",
+    title: `${decisionLabel} طلب الطاقم الطبي`,
+    message: `تم ${decisionLabel} طلب ${doc.serviceType || "الطاقم الطبي"}`,
+    route: "/booking-staff/my",
+    metadata: {
+      bookingId: doc._id,
+      serviceType: doc.serviceType || null,
+      status: doc.status,
+    },
+  });
+});
+
 
 export const BookingNurseModel =
   mongoose.models.BookingNurse || mongoose.model("BookingNurse", bookingSchema);

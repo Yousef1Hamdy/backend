@@ -32,3 +32,20 @@ export const shareProfile = {
     })
     .required(),
 };
+
+export const getUserNotifications = {
+  params: joi.object().keys({}).required(),
+};
+
+export const markUserNotificationAsRead = {
+  params: joi
+    .object()
+    .keys({
+      notificationId: generalValidationFields.id.required(),
+    })
+    .required(),
+};
+
+export const markAllUserNotificationsAsRead = {
+  params: joi.object().keys({}).required(),
+};

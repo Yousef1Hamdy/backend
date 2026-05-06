@@ -1,7 +1,7 @@
 import {
-  BookingEnum,
   NotFoundException,
   TypeServiceEnum,
+  statusEnum,
 } from "../../common/index.js";
 import {
   BookingModel,
@@ -47,8 +47,102 @@ const formatArabicWeekday = (value) =>
     timeZone: "UTC",
   }).format(new Date(value));
 
+const CHILDCARE_TYPE_ORDER = ["normal", "nicu"];
+const HEALTHCARE_TYPE_ORDER = ["icu", "ccu", "picu"];
+
+const CHILDCARE_META = {
+  normal: {
+    title: "حضانات أطفال",
+    shortTitle: "حضانات أطفال",
+    icon: "🍼",
+  },
+  nicu: {
+    title: "العناية المركزة لحديثي الولادة (NICU)",
+    shortTitle: "NICU",
+    icon: "👶",
+  },
+};
+
+const HEALTHCARE_META = {
+  icu: {
+    title: "عناية مركزة للكبار (ICU)",
+    shortTitle: "ICU",
+    icon: "🏥",
+  },
+  ccu: {
+    title: "عناية القلب (CCU)",
+    shortTitle: "CCU",
+    icon: "❤️",
+  },
+  picu: {
+    title: "عناية الأطفال (PICU)",
+    shortTitle: "PICU",
+    icon: "👶",
+  },
+};
+
 const normalizeStatus = (booking, decisionState) =>
-  decisionState?.status || booking.status || BookingEnum.Pending;
+  decisionState?.status || booking.status || statusEnum.pending;
+
+const detectChildcareSubtype = (name = "") => {
+  const lowered = name.toLowerCase();
+
+  if (lowered.includes("nicu")) {
+    return "nicu";
+  }
+
+  if (/(حديثي الولادة|مبتسرة|رعاية)/i.test(name) && !/(أطفال|اطفال|normal)/i.test(name)) {
+    return "nicu";
+  }
+
+  return "normal";
+};
+
+const detectHealthcareSubtype = (name = "") => {
+  const lowered = name.toLowerCase();
+
+  if (lowered.includes("nicu")) {
+    return null;
+  }
+
+  if (lowered.includes("picu")) {
+    return "picu";
+  }
+
+  if (lowered.includes("ccu")) {
+    return "ccu";
+  }
+
+  if (lowered.includes("icu")) {
+    return "icu";
+  }
+
+  if (/(القلب)/i.test(name)) {
+    return "ccu";
+  }
+
+  if (/(الأطفال|الاطفال|الفائقة للأطفال)/i.test(name)) {
+    return "picu";
+  }
+
+  if (/(الكبار|عناية مركزة للكبار)/i.test(name)) {
+    return "icu";
+  }
+
+  return null;
+};
+
+const detectDashboardSubtype = (service = {}) => {
+  if (service.type === TypeServiceEnum.Nursery) {
+    return detectChildcareSubtype(service.name);
+  }
+
+  if (service.type === TypeServiceEnum.Care) {
+    return detectHealthcareSubtype(service.name);
+  }
+
+  return null;
+};
 
 const buildDateContext = (dateInput) => {
   const selectedDay = dateInput ? toUtcStartOfDay(dateInput) : toUtcStartOfDay();
@@ -179,6 +273,163 @@ const buildSectionOccupancyChart = ({ serviceStatsMap, placeGroups }) => {
   };
 };
 
+const buildServicesMap = (services) =>
+  new Map(services.map((service) => [service._id.toString(), service]));
+
+const buildSubtypeCapacityBuckets = (services, order, detectSubtype, metaMap) => {
+  const buckets = order.reduce((accumulator, key) => {
+    accumulator[key] = {
+      key,
+      title: metaMap[key].title,
+      shortTitle: metaMap[key].shortTitle,
+      icon: metaMap[key].icon,
+      capacity: 0,
+      services: [],
+    };
+
+    return accumulator;
+  }, {});
+
+  for (const service of services) {
+    const subtype = detectSubtype(service.name);
+
+    if (!subtype || !buckets[subtype]) {
+      continue;
+    }
+
+    buckets[subtype].capacity += service.capacity ?? 0;
+    buckets[subtype].services.push({
+      _id: service._id,
+      name: service.name,
+      capacity: service.capacity ?? 0,
+    });
+  }
+
+  return order.map((key) => ({
+    ...buckets[key],
+    available: buckets[key].capacity > 0,
+  }));
+};
+
+const buildDashboardPlaces = (placeGroups) => {
+  const childcareServices =
+    placeGroups.find((group) => group.key === "childcare")?.services || [];
+  const healthcareServices =
+    placeGroups.find((group) => group.key === "healthcare")?.services || [];
+
+  const childcareItems = buildSubtypeCapacityBuckets(
+    childcareServices,
+    CHILDCARE_TYPE_ORDER,
+    detectChildcareSubtype,
+    CHILDCARE_META,
+  );
+  const healthcareItems = buildSubtypeCapacityBuckets(
+    healthcareServices,
+    HEALTHCARE_TYPE_ORDER,
+    detectHealthcareSubtype,
+    HEALTHCARE_META,
+  );
+
+  return {
+    childcare: {
+      key: "childcare",
+      title: "حضانات أطفال",
+      totalCapacity: childcareItems.reduce(
+        (sum, item) => sum + (item.capacity || 0),
+        0,
+      ),
+      totalServices: childcareServices.length,
+      items: childcareItems,
+    },
+    healthcare: {
+      key: "healthcare",
+      title: "عناية مركزة",
+      totalCapacity: healthcareItems.reduce(
+        (sum, item) => sum + (item.capacity || 0),
+        0,
+      ),
+      totalServices: healthcareServices.length,
+      items: healthcareItems,
+    },
+  };
+};
+
+const buildSubtypeWeeklyChart = ({
+  buckets,
+  servicesMap,
+  order,
+  metaMap,
+}) => {
+  const series = order.map((key) => ({
+    key,
+    name: metaMap[key].shortTitle,
+    fullName: metaMap[key].title,
+    data: buckets.map(() => 0),
+  }));
+  const seriesMap = new Map(series.map((item) => [item.key, item]));
+
+  buckets.forEach((bucket, index) => {
+    for (const [serviceId, count] of Object.entries(bucket.counts)) {
+      if (!count) {
+        continue;
+      }
+
+      const service = servicesMap.get(serviceId);
+
+      if (!service) {
+        continue;
+      }
+
+      const subtype = detectDashboardSubtype(service);
+
+      if (!subtype || !seriesMap.has(subtype)) {
+        continue;
+      }
+
+      seriesMap.get(subtype).data[index] += count;
+    }
+  });
+
+  return {
+    labels: buckets.map((bucket) => bucket.dayLabel),
+    dates: buckets.map((bucket) => bucket.date),
+    series,
+  };
+};
+
+const buildSubtypeOccupancyChart = ({
+  groupedPlaces,
+  serviceStatsMap,
+}) => {
+  const orderedItems = [
+    ...groupedPlaces.childcare.items,
+    ...groupedPlaces.healthcare.items,
+  ];
+
+  return {
+    labels: orderedItems.map((item) => item.shortTitle),
+    series: [
+      {
+        key: "occupied",
+        label: "الحجوزات",
+        data: orderedItems.map((item) =>
+          item.services.reduce(
+            (sum, service) =>
+              sum +
+              (serviceStatsMap.get(service._id.toString())?.totalBookings || 0),
+            0,
+          ),
+        ),
+      },
+      {
+        key: "available",
+        label: "الأماكن المتاحة",
+        data: orderedItems.map((item) => item.capacity || 0),
+      },
+    ],
+  };
+};
+
 export const getHospitalAccountHome = async (hospitalId, { date } = {}) => {
   const hospital = await ensureHospitalExists(hospitalId);
   const dateContext = buildDateContext(date);
@@ -252,12 +503,12 @@ export const getHospitalAccountHome = async (hospitalId, { date } = {}) => {
           total: { $sum: 1 },
           pending: {
             $sum: {
-              $cond: [{ $eq: ["$status", BookingEnum.Pending] }, 1, 0],
+              $cond: [{ $eq: ["$status", statusEnum.pending] }, 1, 0],
             },
           },
           confirmed: {
             $sum: {
-              $cond: [{ $eq: ["$status", BookingEnum.Confirmed] }, 1, 0],
+              $cond: [{ $eq: ["$status", statusEnum.confirmed] }, 1, 0],
             },
           },
         },
@@ -284,8 +535,8 @@ export const getHospitalAccountHome = async (hospitalId, { date } = {}) => {
   );
 
   const statusTotals = {
-    [BookingEnum.Pending]: 0,
-    [BookingEnum.Confirmed]: 0,
+    [statusEnum.pending]: 0,
+    [statusEnum.confirmed]: 0,
     refused: 0,
   };
   const typeTotals = buildEmptyTypeTotals();
@@ -317,9 +568,9 @@ export const getHospitalAccountHome = async (hospitalId, { date } = {}) => {
     if (type && typeTotals[type]) {
       typeTotals[type].total += 1;
 
-      if (status === BookingEnum.Pending) {
+      if (status === statusEnum.pending) {
         typeTotals[type].pending += 1;
-      } else if (status === BookingEnum.Confirmed) {
+      } else if (status === statusEnum.confirmed) {
         typeTotals[type].confirmed += 1;
       } else if (status === "refused") {
         typeTotals[type].refused += 1;
@@ -330,9 +581,9 @@ export const getHospitalAccountHome = async (hospitalId, { date } = {}) => {
       const serviceStats = serviceStatsMap.get(serviceId);
       serviceStats.totalBookings += 1;
 
-      if (status === BookingEnum.Pending) {
+      if (status === statusEnum.pending) {
         serviceStats.pendingBookings += 1;
-      } else if (status === BookingEnum.Confirmed) {
+      } else if (status === statusEnum.confirmed) {
         serviceStats.confirmedBookings += 1;
       } else if (status === "refused") {
         serviceStats.refusedBookings += 1;
@@ -367,9 +618,25 @@ export const getHospitalAccountHome = async (hospitalId, { date } = {}) => {
     weeklyBookings,
     weekStart: dateContext.weekStart,
   });
-  const sectionOccupancyChart = buildSectionOccupancyChart({
+  const weeklyBuckets = buildWeeklyBuckets({
+    services,
+    weeklyBookings,
+    weekStart: dateContext.weekStart,
+  });
+  const servicesMap = buildServicesMap(services);
+  const groupedPlaces = buildDashboardPlaces(placeGroups);
+  const sectionOccupancyChart = buildSubtypeOccupancyChart({
+    groupedPlaces,
     serviceStatsMap,
-    placeGroups,
+  });
+  const reservationsBySection = buildSubtypeWeeklyChart({
+    buckets: weeklyBuckets,
+    servicesMap,
+    order: [...CHILDCARE_TYPE_ORDER, ...HEALTHCARE_TYPE_ORDER],
+    metaMap: {
+      ...CHILDCARE_META,
+      ...HEALTHCARE_META,
+    },
   });
 
   return {
@@ -380,18 +647,34 @@ export const getHospitalAccountHome = async (hospitalId, { date } = {}) => {
     overview: {
       totalServices: services.length,
       totalBookings: selectedBookings.length,
-      pendingBookings: statusTotals[BookingEnum.Pending],
-      confirmedBookings: statusTotals[BookingEnum.Confirmed],
+      pendingBookings: statusTotals[statusEnum.pending],
+      confirmedBookings: statusTotals[statusEnum.confirmed],
       refusedBookings: statusTotals.refused,
+      totalCapacity: capacitySummary.totalCapacity,
+      childcareCapacity: capacitySummary.childcareCapacity,
+      healthcareCapacity: capacitySummary.healthcareCapacity,
     },
-    cards,
-    availablePlaces: placeGroups,
-    capacitySummary,
-    bookingOptions: cards.map((option) => ({
-      key: option.key,
-      title: `${option.title} accepted`,
-      totalBookings: option.confirmedBookings,
-    })),
+    summaryCards: [
+      {
+        key: "total-bookings",
+        title: "إجمالي طلبات الحجز",
+        value: selectedBookings.length,
+        subtitle: "طلبات اليوم",
+      },
+      {
+        key: "childcare-capacity",
+        title: "الحضانات",
+        value: capacitySummary.childcareCapacity,
+        subtitle: "الأماكن المتاحة",
+      },
+      {
+        key: "healthcare-capacity",
+        title: "العناية المركزة",
+        value: capacitySummary.healthcareCapacity,
+        subtitle: "الأماكن المتاحة",
+      },
+    ],
+    places: groupedPlaces,
     notifications: {
       unreadCount: unreadNotifications,
       latest: recentNotifications.map((notification) => ({
@@ -405,47 +688,12 @@ export const getHospitalAccountHome = async (hospitalId, { date } = {}) => {
     },
     requests: selectedReservations.slice(0, 6),
     charts: {
-      weeklyReservations: weeklyReservationsChart,
+      weeklyReservations: {
+        labels: weeklyReservationsChart.labels,
+        dates: weeklyReservationsChart.dates,
+        series: reservationsBySection.series,
+      },
       dailySectionOccupancy: sectionOccupancyChart,
-    },
-    analytics: {
-      bookingsByStatus: [
-        {
-          status: BookingEnum.Pending,
-          count: statusTotals[BookingEnum.Pending],
-        },
-        {
-          status: BookingEnum.Confirmed,
-          count: statusTotals[BookingEnum.Confirmed],
-        },
-        {
-          status: "refused",
-          count: statusTotals.refused,
-        },
-      ],
-      bookingsByType: Object.entries(TypeServiceEnum).map(([typeKey, typeLabel]) => ({
-        typeKey,
-        typeLabel,
-        count: typeTotals[typeLabel]?.total || 0,
-      })),
-      occupancyByService: Array.from(serviceStatsMap.values()),
-      currentCapacityByService: placeGroups.flatMap((group) =>
-        group.services.map((service) => ({
-          ...service,
-          groupKey: group.key,
-          groupTitle: group.title,
-        })),
-      ),
-      weeklyBookings: weeklyReservationsChart.dates.map((dateValue, index) => ({
-        date: dateValue,
-        dayLabel: weeklyReservationsChart.labels[index],
-        services: weeklyReservationsChart.series.map((series) => ({
-          serviceId: series.serviceId,
-          name: series.name,
-          type: series.type,
-          bookings: series.data[index],
-        })),
-      })),
       monthlyBookings: monthlyBookings.map((item) => ({
         month: `${item._id.year}-${String(item._id.month).padStart(2, "0")}`,
         total: item.total,

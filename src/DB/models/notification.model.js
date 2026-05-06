@@ -2,10 +2,14 @@ import mongoose from "mongoose";
 
 const notificationSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
     hospitalId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Hospital",
-      required: true,
       index: true,
     },
     type: {
@@ -46,6 +50,12 @@ const notificationSchema = new mongoose.Schema(
     collection: "Notifications",
   },
 );
+
+notificationSchema.pre("validate", function validateRecipient() {
+  if (!this.userId && !this.hospitalId) {
+    throw new Error("notification recipient is required");
+  }
+});
 
 export const NotificationModel =
   mongoose.models.Notification ||

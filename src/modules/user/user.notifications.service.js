@@ -1,8 +1,7 @@
 import { NotFoundException } from "../../common/index.js";
 import { NotificationModel } from "../../DB/index.js";
-import { ensureHospitalExists } from "../hospitalAccountShared/hospitalAccount.shared.js";
 
-const hospitalNotificationStreams = new Map();
+const userNotificationStreams = new Map();
 
 const serializeNotification = (notification) => ({
   _id: notification._id,
@@ -16,8 +15,8 @@ const serializeNotification = (notification) => ({
   metadata: notification.metadata || {},
 });
 
-const emitHospitalNotificationEvent = (hospitalId, event, payload) => {
-  const listeners = hospitalNotificationStreams.get(String(hospitalId));
+const emitUserNotificationEvent = (userId, event, payload) => {
+  const listeners = userNotificationStreams.get(String(userId));
 
   if (!listeners?.size) {
     return;
@@ -30,28 +29,26 @@ const emitHospitalNotificationEvent = (hospitalId, event, payload) => {
   }
 };
 
-export const subscribeToHospitalNotifications = async (hospitalId, res) => {
-  await ensureHospitalExists(hospitalId);
+export const subscribeToUserNotifications = async (userId, res) => {
+  const key = String(userId);
 
-  const key = String(hospitalId);
-
-  if (!hospitalNotificationStreams.has(key)) {
-    hospitalNotificationStreams.set(key, new Set());
+  if (!userNotificationStreams.has(key)) {
+    userNotificationStreams.set(key, new Set());
   }
 
-  hospitalNotificationStreams.get(key).add(res);
+  userNotificationStreams.get(key).add(res);
 
   res.write(
     `event: connected\ndata: ${JSON.stringify({
-      hospitalId: key,
+      userId: key,
       connectedAt: new Date().toISOString(),
     })}\n\n`,
   );
 };
 
-export const unsubscribeFromHospitalNotifications = (hospitalId, res) => {
-  const key = String(hospitalId);
-  const listeners = hospitalNotificationStreams.get(key);
+export const unsubscribeFromUserNotifications = (userId, res) => {
+  const key = String(userId);
+  const listeners = userNotificationStreams.get(key);
 
   if (!listeners) {
     return;
@@ -60,12 +57,12 @@ export const unsubscribeFromHospitalNotifications = (hospitalId, res) => {
   listeners.delete(res);
 
   if (!listeners.size) {
-    hospitalNotificationStreams.delete(key);
+    userNotificationStreams.delete(key);
   }
 };
 
-export const createHospitalNotification = async ({
-  hospitalId,
+export const createUserNotification = async ({
+  userId,
   type,
   title,
   message,
@@ -73,7 +70,7 @@ export const createHospitalNotification = async ({
   metadata = {},
 } = {}) => {
   const notification = await NotificationModel.create({
-    hospitalId,
+    userId,
     type,
     title,
     message,
@@ -81,22 +78,20 @@ export const createHospitalNotification = async ({
     metadata,
   });
 
-  emitHospitalNotificationEvent(hospitalId, "notification.created", {
+  emitUserNotificationEvent(userId, "notification.created", {
     notification: serializeNotification(notification),
   });
 
   return notification;
 };
 
-export const getHospitalNotifications = async (hospitalId) => {
-  await ensureHospitalExists(hospitalId);
-
-  const notifications = await NotificationModel.find({ hospitalId })
+export const getUserNotifications = async (userId) => {
+  const notifications = await NotificationModel.find({ userId })
     .sort({ createdAt: -1 })
     .lean();
 
   const unreadCount = await NotificationModel.countDocuments({
-    hospitalId,
+    userId,
     isRead: false,
   });
 
@@ -107,23 +102,24 @@ export const getHospitalNotifications = async (hospitalId) => {
   };
 };
 
-export const markHospitalNotificationAsRead = async (
-  hospitalId,
-  notificationId,
-) => {
-  await ensureHospitalExists(hospitalId);
+export const getUserUnreadNotificationsCount = async (userId) =>
+  await NotificationModel.countDocuments({
+    userId,
+    isRead: false,
+  });
 
+export const markUserNotificationAsRead = async (userId, notificationId) => {
   const notification = await NotificationModel.findOneAndUpdate(
     {
       _id: notificationId,
-      hospitalId,
+      userId,
     },
     {
       isRead: true,
       readAt: new Date(),
     },
     {
-      returnDocument: "after",
+      new: true,
     },
   ).lean();
 
@@ -131,25 +127,23 @@ export const markHospitalNotificationAsRead = async (
     throw NotFoundException({ message: "notification not found" });
   }
 
-  emitHospitalNotificationEvent(hospitalId, "notification.read", {
+  emitUserNotificationEvent(userId, "notification.read", {
     notification: serializeNotification(notification),
   });
 
   return notification;
 };
 
-export const markAllHospitalNotificationsAsRead = async (hospitalId) => {
-  await ensureHospitalExists(hospitalId);
-
+export const markAllUserNotificationsAsRead = async (userId) => {
   const readAt = new Date();
 
   await NotificationModel.updateMany(
-    { hospitalId, isRead: false },
+    { userId, isRead: false },
     { isRead: true, readAt },
   );
 
-  emitHospitalNotificationEvent(hospitalId, "notification.readAll", {
-    hospitalId: String(hospitalId),
+  emitUserNotificationEvent(userId, "notification.readAll", {
+    userId: String(userId),
     readAt: readAt.toISOString(),
   });
 
