@@ -1,4 +1,4 @@
-import { BookingEnum, NotFoundException } from "../../common/index.js";
+import { NotFoundException, statusEnum } from "../../common/index.js";
 import { BookingModel, ServiceModel } from "../../DB/index.js";
 import { HospitalAccountReservationStateModel } from "../../DB/models/hospitalAccountReservationState.model.js";
 import {
@@ -100,7 +100,7 @@ export const removeAcceptedHospitalAccountReservation = async (
   return {
     reservationId,
     reservationType,
-    removedStatus: BookingEnum.Confirmed,
+    removedStatus: statusEnum.confirmed,
     message: "accepted reservation removed successfully",
   };
 };

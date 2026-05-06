@@ -10,7 +10,10 @@ import {
   updateHospitalAccountPlaces,
 } from "./home.service.js";
 import * as validators from "./home.validation.js";
-import { getHospitalIdByAccountId } from "../hospitalAccountShared/hospitalAccount.shared.js";
+import {
+  ensureHospitalAccountAccess,
+  getHospitalIdByAccountId,
+} from "../hospitalAccountShared/hospitalAccount.shared.js";
 
 const router = Router();
 
@@ -58,6 +61,10 @@ router.get(
   authorization([RoleEnum.Admin, RoleEnum.Hospital]),
   validation(validators.getHospitalHome),
   async (req, res) => {
+    if (req.user.role === RoleEnum.Hospital) {
+      await ensureHospitalAccountAccess(req.user, req.params.hospitalId);
+    }
+
     const home = await getHospitalAccountHome(req.params.hospitalId, req.query);
 
     return successResponse({
@@ -74,6 +81,10 @@ router.get(
   authorization([RoleEnum.Admin, RoleEnum.Hospital]),
   validation(validators.getHospitalHome),
   async (req, res) => {
+    if (req.user.role === RoleEnum.Hospital) {
+      await ensureHospitalAccountAccess(req.user, req.params.hospitalId);
+    }
+
     const landingPage = await getHospitalAccountHome(
       req.params.hospitalId,
       req.query,
@@ -93,6 +104,10 @@ router.patch(
   authorization([RoleEnum.Admin, RoleEnum.Hospital]),
   validation(validators.updateHospitalPlaces),
   async (req, res) => {
+    if (req.user.role === RoleEnum.Hospital) {
+      await ensureHospitalAccountAccess(req.user, req.params.hospitalId);
+    }
+
     const service = await updateHospitalAccountPlaces(
       req.params.hospitalId,
       req.params.serviceId,

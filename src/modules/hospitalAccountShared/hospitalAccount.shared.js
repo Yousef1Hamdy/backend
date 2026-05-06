@@ -1,8 +1,9 @@
 import {
-  BookingEnum,
+  ForbiddenRequestException,
   NotFoundException,
   TypeServiceEnum,
   decryption,
+  statusEnum,
 } from "../../common/index.js";
 import { getServiceCapacityMapAtDate } from "../../common/service/capacity-history.service.js";
 import {
@@ -62,6 +63,22 @@ export const getHospitalIdByAccountId = async (accountId) => {
   return hospital;
 };
 
+export const ensureHospitalAccountAccess = async (user, hospitalId) => {
+  if (!user) {
+    throw ForbiddenRequestException({ message: "access denied" });
+  }
+
+  const linkedHospital = await getHospitalIdByAccountId(user._id);
+
+  if (String(linkedHospital._id) !== String(hospitalId)) {
+    throw ForbiddenRequestException({
+      message: "hospital account cannot access another hospital",
+    });
+  }
+
+  return linkedHospital;
+};
+
 export const loadHospitalBookings = async (hospitalId, additionalFilter = {}) => {
   return await BookingModel.find({ hospitalId, ...additionalFilter })
     .populate("userId", "firstName lastName phone")
@@ -98,11 +115,11 @@ export const mapReservationStatus = (booking, decisionState) => {
     return decisionState.status;
   }
 
-  return booking.status || BookingEnum.Pending;
+  return booking.status || statusEnum.pending;
 };
 
 export const isConfirmedReservation = (booking, decisionState) =>
-  mapReservationStatus(booking, decisionState) === BookingEnum.Confirmed;
+  mapReservationStatus(booking, decisionState) === statusEnum.confirmed;
 
 export const isRefusedReservation = (booking, decisionState) =>
   mapReservationStatus(booking, decisionState) === "refused";

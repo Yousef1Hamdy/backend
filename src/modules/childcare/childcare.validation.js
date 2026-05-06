@@ -1,6 +1,12 @@
 import joi from "joi";
 import { generalValidationFields } from "../../common/index.js";
 
+export const childcareId = {
+  params: joi.object({
+    id: generalValidationFields.id.required(),
+  }),
+};
+
 export const bookChildcare = {
   body: joi.object({
     childName: joi.string().min(2).required(),

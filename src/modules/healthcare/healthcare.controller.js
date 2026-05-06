@@ -38,17 +38,18 @@ router.post(
   authentication(),
   validation(validators.bookHealthcare),
   async (req, res) => {
-    const { patientName, phone, condition } = req.body;
+    const { patientName, phone, condition, careType } = req.body;
 
     const order = await bookHealthcare(req.user._id, req.params.id, {
       patientName,
       phone,
       condition,
+      careType,
     });
 
     return successResponse({
       res,
-      message: "Reservation confirmed",
+      message: "Reservation request sent",
       data: { order },
     });
   },

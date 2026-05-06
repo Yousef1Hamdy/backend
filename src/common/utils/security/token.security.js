@@ -12,6 +12,7 @@ import {
 } from "../../../../config/config.service.js";
 import {
   BadRequestException,
+  NotFoundException,
   UnauthorizedException,
 } from "../response/index.js";
 import { AudienceEnum, RoleEnum, TokenTypeEnum } from "../../enums/index.js";
@@ -140,13 +141,25 @@ export const decodeToken = async ({
   }
 
   const decoded = jwt.decode(token);
-  if (!decoded.aud?.length) {
+  if (!decoded || typeof decoded !== "object") {
     throw BadRequestException({
       message: "Fail to decode this token and is required",
     });
   }
 
-  const [decodeTokenType, audienceType] = decoded.aud;
+  const audiences = Array.isArray(decoded.aud)
+    ? decoded.aud
+    : decoded.aud
+      ? [decoded.aud]
+      : [];
+
+  if (!audiences.length) {
+    throw BadRequestException({
+      message: "Fail to decode this token and is required",
+    });
+  }
+
+  const [decodeTokenType, audienceType] = audiences;
 
   if (decodeTokenType !== tokenType) {
     throw BadRequestException({

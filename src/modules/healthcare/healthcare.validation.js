@@ -12,6 +12,7 @@ export const bookHealthcare = {
     patientName: generalValidationFields.patientName.required(),
     phone: generalValidationFields.phone.required(),
     condition: generalValidationFields.medicalCondition.required(),
+    careType: joi.string().valid("icu", "ccu", "picu").required(),
   }),
   params: joi.object({
     id: generalValidationFields.id.required(),

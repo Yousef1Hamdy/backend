@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import {
   BadRequestException,
-  BookingEnum,
   TypeServiceEnum,
+  statusEnum,
 } from "../../common/index.js";
 import { ServiceModel } from "./service.model.js";
 
@@ -63,8 +63,8 @@ const bookingSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: Object.values(BookingEnum),
-      default: "pending",
+      enum: Object.values(statusEnum),
+      default: statusEnum.pending,
     },
   },
   {
@@ -90,7 +90,7 @@ bookingSchema.pre("save", async function decrementServiceCapacity() {
       capacity: { $gt: 0 },
     },
     { $inc: { capacity: -1 } },
-    { new: true, runValidators: true },
+    { returnDocument: "after", runValidators: true },
   ).lean();
 
   if (!service) {

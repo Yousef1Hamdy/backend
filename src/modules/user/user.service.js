@@ -1,4 +1,7 @@
-import { ACCESS_EXPIRE_IN } from "../../../config/config.service.js";
+import {
+  ACCESS_EXPIRE_IN,
+  REFRESH_EXPIRE_IN,
+} from "../../../config/config.service.js";
 import {
   baseRevokeTokenKey,
   cloud,
@@ -12,6 +15,7 @@ import {
   LogoutEnum,
   NotFoundException,
   revokeTokenKey,
+  set,
   uploadFile,
 } from "../../common/index.js";
 import { findOne, findOneAndUpdate, UserModel } from "../../DB/index.js";
@@ -70,14 +74,16 @@ export const rotateToken = async (user, { jti, iat }, issuer) => {
     throw ConflictException({ message: "Current access token stile valid" });
   }
   await createRevokeToken({
-    userId: sub,
+    userId: user._id,
     jti,
-    ttl: iat + REFRESH_EXPIRE_IN,
+    ttl: Math.max(iat + REFRESH_EXPIRE_IN - Math.floor(Date.now() / 1000), 1),
   });
   return createLoginCredentials(user, issuer);
 };
 
-export const logout = async ({ flag }, user, { jti, iat, sub }) => {
+export const logout = async (payload = {}, user, decoded = {}) => {
+  const { flag } = payload;
+  const { jti, iat, sub } = decoded;
   let status = 200;
   switch (flag) {
     case LogoutEnum.All:
@@ -90,7 +96,7 @@ export const logout = async ({ flag }, user, { jti, iat, sub }) => {
       await createRevokeToken({
         userId: sub,
         jti,
-        ttl: iat + REFRESH_EXPIRE_IN,
+        ttl: Math.max(iat + REFRESH_EXPIRE_IN - Math.floor(Date.now() / 1000), 1),
       });
 
       status = 201;

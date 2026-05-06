@@ -1,4 +1,4 @@
-import { BookingEnum, NotFoundException } from "../../common/index.js";
+import { NotFoundException, statusEnum } from "../../common/index.js";
 import { BookingModel } from "../../DB/index.js";
 import { HospitalAccountReservationStateModel } from "../../DB/models/hospitalAccountReservationState.model.js";
 import {
@@ -8,6 +8,7 @@ import {
   mapReservation,
   normalizeReservationType,
 } from "../hospitalAccountShared/hospitalAccount.shared.js";
+import { createUserNotification } from "../user/user.notifications.service.js";
 
 export const getHospitalAccountReservations = async (
   hospitalId,
@@ -26,8 +27,13 @@ export const getHospitalAccountReservations = async (
     filteredBookings.map((booking) => booking._id),
   );
 
+  const pendingBookings = filteredBookings.filter((booking) => {
+    const state = decisionStatesMap.get(String(booking._id));
+    return !state?.status || state.status === statusEnum.pending;
+  });
+
   const reservations = await Promise.all(
-    filteredBookings.map((booking) =>
+    pendingBookings.map((booking) =>
       mapReservation(booking, decisionStatesMap.get(String(booking._id))),
     ),
   );
@@ -79,7 +85,7 @@ export const getHospitalAccountReservationDetails = async (
       reservationType,
     },
     actions: {
-      canAccept: reservation.status !== BookingEnum.Confirmed,
+      canAccept: reservation.status !== statusEnum.confirmed,
       canRefuse: reservation.status !== "refused",
     },
   };
@@ -91,15 +97,15 @@ export const updateHospitalAccountReservationStatus = async (
   reservationId,
   action,
 ) => {
-  await getHospitalAccountReservationDetails(
+  const reservation = await getHospitalAccountReservationDetails(
     hospitalId,
     reservationType,
     reservationId,
   );
 
-  const status = action === "accept" ? BookingEnum.Confirmed : "refused";
+  const status = action === "accept" ? statusEnum.confirmed : "refused";
 
-  const reservation = await HospitalAccountReservationStateModel.findOneAndUpdate(
+  const decisionState = await HospitalAccountReservationStateModel.findOneAndUpdate(
     {
       hospitalId,
       bookingId: reservationId,
@@ -117,10 +123,33 @@ export const updateHospitalAccountReservationStatus = async (
     },
   ).lean();
 
+  const decisionLabel = status === statusEnum.confirmed ? "قبول" : "رفض";
+  const route =
+    reservationType === "healthcare" || reservationType === "childcare"
+      ? "/booking"
+      : "/booking-staff/my";
+
+  if (reservation.patient?._id) {
+    await createUserNotification({
+      userId: reservation.patient._id,
+      type: "reservation-status-updated",
+      title: `${decisionLabel} طلب الحجز`,
+      message: `تم ${decisionLabel} طلب الحجز في ${reservation.service?.name || "الخدمة"}`,
+      route,
+      metadata: {
+        bookingId: reservationId,
+        hospitalId,
+        reservationType,
+        status,
+        serviceName: reservation.service?.name || null,
+      },
+    });
+  }
+
   return {
     reservationId,
     reservationType,
-    status: reservation.status,
-    decisionAt: reservation.decisionAt,
+    status: decisionState.status,
+    decisionAt: decisionState.decisionAt,
   };
 };

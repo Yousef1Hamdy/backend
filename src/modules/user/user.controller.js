@@ -19,6 +19,13 @@ import {
   shareProfile,
   updatePassword,
 } from "./user.service.js";
+import {
+  getUserNotifications,
+  markAllUserNotificationsAsRead,
+  markUserNotificationAsRead,
+  subscribeToUserNotifications,
+  unsubscribeFromUserNotifications,
+} from "./user.notifications.service.js";
 import { endpoint } from "./user.authorization.js";
 import * as validators from "./user.validation.js";
 
@@ -100,5 +107,71 @@ router.post("/logout", authentication(), async (req, res, next) => {
 
   return successResponse({ res, status });
 });
+
+router.get(
+  "/notifications",
+  authentication(),
+  validation(validators.getUserNotifications),
+  async (req, res) => {
+    const notifications = await getUserNotifications(req.user._id);
+
+    return successResponse({
+      res,
+      message: "user notifications",
+      data: { notifications },
+    });
+  },
+);
+
+router.get("/notifications/stream", authentication(), async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  await subscribeToUserNotifications(req.user._id, res);
+
+  const keepAlive = setInterval(() => {
+    res.write("event: ping\ndata: {}\n\n");
+  }, 25000);
+
+  req.on("close", () => {
+    clearInterval(keepAlive);
+    unsubscribeFromUserNotifications(req.user._id, res);
+    res.end();
+  });
+});
+
+router.patch(
+  "/notifications/:notificationId/read",
+  authentication(),
+  validation(validators.markUserNotificationAsRead),
+  async (req, res) => {
+    const notification = await markUserNotificationAsRead(
+      req.user._id,
+      req.params.notificationId,
+    );
+
+    return successResponse({
+      res,
+      message: "notification marked as read",
+      data: { notification },
+    });
+  },
+);
+
+router.patch(
+  "/notifications/read-all",
+  authentication(),
+  validation(validators.markAllUserNotificationsAsRead),
+  async (req, res) => {
+    const result = await markAllUserNotificationsAsRead(req.user._id);
+
+    return successResponse({
+      res,
+      message: result.message,
+    });
+  },
+);
 
 export default router;

@@ -53,7 +53,7 @@ router.post(
 
     return successResponse({
       res,
-      message: "Reservation confirmed",
+      message: "Reservation request sent",
       data: { order }
     });
   }

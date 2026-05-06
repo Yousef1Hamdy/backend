@@ -144,6 +144,13 @@ export const findOneAndUpdate = async ({
   options,
   model,
 } = {}) => {
+  const normalizedOptions = { ...(options || {}) };
+
+  if ("new" in normalizedOptions && !("returnDocument" in normalizedOptions)) {
+    normalizedOptions.returnDocument = normalizedOptions.new ? "after" : "before";
+    delete normalizedOptions.new;
+  }
+
   if (Array.isArray(update)) {
     update.push({
       $set: {
@@ -151,10 +158,9 @@ export const findOneAndUpdate = async ({
       },
     });
     return await model.findOneAndUpdate(filter || {}, update, {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
-
-      ...options,
+      ...normalizedOptions,
       updatePipeline: true,
     });
   }
@@ -162,10 +168,9 @@ export const findOneAndUpdate = async ({
     filter || {},
     { ...update, $inc: { __v: 1 } },
     {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
-
-      ...options,
+      ...normalizedOptions,
     },
   );
 };
@@ -173,13 +178,20 @@ export const findOneAndUpdate = async ({
 export const findByIdAndUpdate = async ({
   id,
   update,
-  options = { new: true },
+  options = { returnDocument: "after" },
   model,
 }) => {
+  const normalizedOptions = { ...(options || {}) };
+
+  if ("new" in normalizedOptions && !("returnDocument" in normalizedOptions)) {
+    normalizedOptions.returnDocument = normalizedOptions.new ? "after" : "before";
+    delete normalizedOptions.new;
+  }
+
   return await model.findByIdAndUpdate(
     id,
     { ...update, $inc: { __v: 1 } },
-    options,
+    normalizedOptions,
   );
 };
 

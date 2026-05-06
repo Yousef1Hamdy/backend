@@ -2,7 +2,13 @@ import { BadRequestException } from "../common/index.js";
 
 export const validation =  (schema) => {
   return (req, res, next) => {
-    const keys = Object.keys(schema) || [];
+    if (!schema || typeof schema !== "object") {
+      throw BadRequestException({
+        message: "Validation schema is not configured correctly",
+      });
+    }
+
+    const keys = Object.keys(schema);
     const errors = [];
 
     for (const key of keys) {
